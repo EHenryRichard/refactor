@@ -114,14 +114,15 @@ RULES = [
     ("<Xr>(.*?)</Xr>", "<div class='hbv'>$1</div>"),
     ("<Xh>(.*?)</Xh>", "<span class='hb'>$1</span>"),
     ("<Xg>(.*?)</Xg>", "<span class='gk'>$1</span>"),
-    ("<Xt>(.*?)</Xt>", "<br><span class='tl'>$1</span>"),
-    ("<Xe>(.*?)</Xe>", "<br><span class='en'>$1</span>"),
+    ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
+    ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
 ]
-CSS = """span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 5px 8px 5px;}
-span.gk {font-size:135%;color:Midnightblue;font-weight:bold;}
-span.hb {font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
-span.tl {font-size:75%;color:Gray;font-style:italic;}
-span.en {font-size:85%;color:IndianRed;font-weight:bold;}
+CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
+span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 5px 8px 5px;}
+span.gk {display:block;font-size:135%;color:Midnightblue;font-weight:bold;}
+span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
+span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
+span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
 div.hbv {direction:rtl;text-align:right;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
