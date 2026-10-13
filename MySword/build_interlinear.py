@@ -85,22 +85,25 @@ def build_testament(rows, greek):
         key = (BOOK_NO[m.group(1)], int(m.group(2)), int(m.group(3)))
         parts = []
         for _, r, text, eng in sorted(words[seq], key=lambda w: w[0]):
-            w = "「"
-            if text:
-                w += "<%s>%s</%s>" % (cls, esc(text), cls)
             tl = clean(r[TRANSLIT])
-            if tl:
-                w += "<Xt>%s</Xt>" % esc(tl)
             sn = clean(r[strong_col])
-            if sn.isdigit():
-                w += "<%s%s>" % (wtag, sn)
+            sn = "<%s%s>" % (wtag, sn) if sn.isdigit() else ""
             mp = re.sub(r"\s*\|\s*", "+", clean(r[MORPH])).replace(" ", "")
             if mp:
-                w += "<WT%s>" % esc(mp)
                 desc = [d.strip() for d in clean(r[MORPH + 1]).split("|") if d.strip()]
                 if desc:
                     MORPH_DESC[mp]["|".join(desc)] += 1
-            w += "<Xe>%s</Xe>」" % esc(eng or "-")
+                mp = "<WT%s>" % esc(mp)
+            if greek:
+                # one small table per word: every part gets its own row, whatever MySword does to the text inside
+                w = "【<Xg>%s</Xg><Xu>%s</Xu>%s<Xm>%s<Xf>%s</Xf>】" % (esc(text), esc(tl), sn, mp, esc(eng or "-"))
+            else:
+                w = "「"
+                if text:
+                    w += "<%s>%s</%s>" % (cls, esc(text), cls)
+                if tl:
+                    w += "<Xt>%s</Xt>" % esc(tl)
+                w += "%s%s<Xe>%s</Xe>」" % (sn, mp, esc(eng or "-"))
             parts.append(w)
             nwords += 1
         body = " ".join(parts)
@@ -114,19 +117,30 @@ RULES = [
     ("<Xr>(.*?)</Xr>", "<div class='hbv'>$1</div>"),
     ("<Xn>(.*?)</Xn>", "<div class='gkv'>$1</div>"),
     ("<Xh>(.*?)</Xh>", "<span class='hb'>$1</span>"),
-    ("<Xg>(.*?)</Xg>", "<span class='gk'>$1</span>"),
+    # Greek word box: a table with one row per part (Greek, transliteration, Strong's, parsing, English)
+    ("【", "<table class='gw'><tr><td class='gk'>"),
+    ("<Xg>(.*?)</Xg>", "$1</td></tr><tr><td class='tl'>"),
+    ("<Xu>(.*?)</Xu>", "$1</td></tr><tr><td class='ln'>"),
+    ("<Xm>", "</td></tr><tr><td class='ln'>"),
+    ("<Xf>(.*?)</Xf>", "</td></tr><tr><td class='en'>$1"),
+    ("】", "</td></tr></table>"),
     ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
     ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
 ]
 CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
 span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
-span.gk {display:block;font-size:135%;color:Midnightblue;font-weight:bold;}
 span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
 span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
 span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
 div.hbv {direction:rtl;text-align:right;}
 div.gkv {direction:ltr;text-align:left;}
-span.w a {display:block;font-size:70%;line-height:1.25;}"""
+span.w a {display:block;font-size:70%;line-height:1.25;}
+table.gw {display:inline-table;border-collapse:collapse;vertical-align:top;margin:0 6px 10px 6px;}
+table.gw td {text-align:center;padding:0;}
+td.gk {font-size:135%;color:Midnightblue;font-weight:bold;}
+td.tl {font-size:75%;color:Gray;font-style:italic;}
+td.ln {font-size:70%;line-height:1.25;}
+td.en {font-size:85%;color:IndianRed;font-weight:bold;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
