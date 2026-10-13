@@ -124,13 +124,15 @@ span.tl {font-size:75%;color:Gray;font-style:italic;}
 span.en {font-size:85%;color:IndianRed;font-weight:bold;}
 div.hbv {direction:rtl;text-align:right;}"""
 
-DESC = """<h2>Berean Interlinear Bible &mdash; Hebrew &amp; Greek</h2>
+DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
 Strong's number, morphology and the Berean Standard Bible English for that word ("-" where the Berean
 text has no English counterpart). Tap a Strong's number or morphology code for the lookup.</p>
-<p>Source: Berean Bible BSB Translation Tables, bereanbible.com. The Holy Bible, Berean Standard Bible, BSB is
-produced in cooperation with Bible Hub, Discovery Bible, unfoldingWord, Bible Aquifer, OpenBible.com, and the
-Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain.</p>
+<p>Source: BSB Translation Tables, berean.bible. This is an independent adaptation, not an official Berean
+product: words are in Hebrew/Greek order and the "vvv" placeholder is shown as "-".</p>
+<p>The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
+OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the
+public domain.</p>
 <p>Verse numbering is KJV-style (31,102 verses). Verses the Berean text omits (e.g. Matthew 17:21) are empty.</p>"""
 
 
@@ -143,10 +145,10 @@ CREATE TABLE details (title TEXT, abbreviation TEXT, description TEXT, comments 
  version TEXT, versiondate DATETIME, publishdate TEXT, CustomCSS TEXT, morphology BOOL);
 CREATE TABLE Dictionary (word, data);
 """)
-    info = ("Parsing codes for the Berean Interlinear Bible (Hebrew &amp; Greek), BIBhg. "
-            "Descriptions are from the Berean Bible BSB Translation Tables, bereanbible.com.")
+    info = ("Parsing codes for the Hebrew &amp; Greek Interlinear (BSB Tables), BIBhg. "
+            "Descriptions are from the BSB Translation Tables, berean.bible. Not an official Berean product.")
     c.execute("insert into details values (?,?,?,?,?,?,?,?,?,?,?)", (
-        "Berean Morphology Codes", "BIBhgm", info, info, "Berean Bible Translation Committee", 0, "2.0",
+        "Interlinear Morphology Codes (BSB Tables)", "BIBhgm", info, info, "Berean Bible Translation Committee (source data)", 0, "2.0",
         "2026-10-13 00:00:00", "2026-10-13 00:00:00", "b {color:Midnightblue;}", 1))
     # a few codes carry different descriptions on different rows in Berean's tables; keep the most common
     disputed = sum(1 for v in MORPH_DESC.values() if len(v) > 1)
@@ -175,10 +177,10 @@ CREATE TABLE Details (Title NVARCHAR(255), Description TEXT, Abbreviation NVARCH
 CREATE TABLE Bible (Book INTEGER, Chapter INTEGER, Verse INTEGER, Scripture TEXT);
 """)
     c.execute("insert into Details values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-        "Berean Interlinear Bible (Hebrew & Greek)", DESC, "BIBhg", DESC, "2.0",
-        "2026-10-13 00:00:00", "2026-10-13 00:00:00", "Bible Hub / Berean Bible Translation Committee",
-        "Berean Bible Translation Committee", "BibleBento Berean-remix",
-        "https://bereanbible.com", None, "eng", 0, 1, 1, 1,
+        "Hebrew & Greek Interlinear (BSB Tables)", DESC, "BIBhg", DESC, "2.0",
+        "2026-10-13 00:00:00", "2026-10-13 00:00:00", "Independent adaptation (not an official Berean product)",
+        "Berean Bible Translation Committee (source data)", "build_interlinear.py",
+        "https://berean.bible", None, "eng", 0, 1, 1, 1,
         "\n".join("%s\t%s" % r for r in RULES), CSS))
     rows = [(b, ch, v, t) for d in (hb, gk) for (b, ch, v), t in d.items()]
     rows.sort(key=lambda r: r[:3])

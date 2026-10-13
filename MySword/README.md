@@ -1,4 +1,4 @@
-# MySword Interlinear Bible (Hebrew + Greek)
+# Hebrew & Greek Interlinear (BSB Tables) for MySword
 
 **Files to download:**
 
@@ -36,6 +36,9 @@ Source files: `source/bsb_OT.tsv.zip` and `source/bsb_NT.tsv.zip` (the Berean ta
 ## Source and licence
 
 The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
-unfoldingWord, Bible Aquifer, OpenBible.com, and the Berean Bible Translation Committee. The Berean Bible
-states: "This text of God's Word has been dedicated to the public domain." Check bereanbible.com for the terms
-that apply to the Hebrew and Greek tables themselves.
+OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the
+public domain (Berean terms and conditions, 30 April 2023: "All uses are freely permitted").
+
+This module is an independent adaptation, not an official Berean product. It differs from the official text in
+presentation (Hebrew/Greek word order, "vvv" shown as "-", verse labels removed), so per Berean's request it does
+not carry the Berean name.
