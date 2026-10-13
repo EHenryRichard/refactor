@@ -109,24 +109,27 @@ def build_testament(rows, greek):
 
 
 RULES = [
-    ("「", "<span class='w'>"),
+    # layout is also written inline (style=…): in New Testament verses MySword kept the colours from CustomCSS
+    # but dropped its layout rules, so every word ran together on one line
+    ("「", "<span class='ilw' style='display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px'>"),
     ("」", "</span>"),
-    ("<Xr>(.*?)</Xr>", "<div class='hbv'>$1</div>"),
-    ("<Xn>(.*?)</Xn>", "<div class='gkv'>$1</div>"),
-    ("<Xh>(.*?)</Xh>", "<span class='hb'>$1</span>"),
-    ("<Xg>(.*?)</Xg>", "<span class='gk'>$1</span>"),
-    ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
-    ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
+    ("<Xr>(.*?)</Xr>", "<div class='ilhbv' style='direction:rtl;text-align:right'>$1</div>"),
+    ("<Xn>(.*?)</Xn>", "<div class='ilgkv' style='direction:ltr;text-align:left'>$1</div>"),
+    ("<Xh>(.*?)</Xh>", "<span class='ilhb' style='display:block;direction:rtl'>$1</span>"),
+    ("<Xg>(.*?)</Xg>", "<span class='ilgk' style='display:block'>$1</span>"),
+    ("<Xt>(.*?)</Xt>", "<span class='iltl' style='display:block;direction:ltr;unicode-bidi:isolate'>$1</span>"),
+    ("<Xe>(.*?)</Xe>", "<span class='ilen' style='display:block;direction:ltr;unicode-bidi:isolate'>$1</span>"),
 ]
-CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
-span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
-span.gk {display:block;font-size:135%;color:Midnightblue;font-weight:bold;}
-span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
-span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
-span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
-div.hbv {direction:rtl;text-align:right;}
-div.gkv {direction:ltr;text-align:left;}
-span.w a {display:block;font-size:70%;line-height:1.25;}"""
+CSS = """/* colours and sizes; layout is also inline in RULES. Each part is its own block inside the word box
+   (MySword drops <br> in verse text). Class names are prefixed "il" to avoid clashing with MySword's own. */
+span.ilw {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
+span.ilgk {display:block;font-size:135%;color:Midnightblue;font-weight:bold;}
+span.ilhb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
+span.iltl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
+span.ilen {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
+div.ilhbv {direction:rtl;text-align:right;}
+div.ilgkv {direction:ltr;text-align:left;}
+span.ilw a {display:block;font-size:70%;line-height:1.25;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
