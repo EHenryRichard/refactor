@@ -10,7 +10,7 @@ Output:
 Usage: python3 build_interlinear.py [outfile]
 """
 import csv, io, os, re, sqlite3, sys, zipfile
-from collections import OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from html import escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -65,6 +65,9 @@ def english(r):
     return clean(r[BEG_Q].strip() + e + r[PNC].strip() + r[END_Q].strip())
 
 
+MORPH_DESC = defaultdict(Counter)  # <WT> code -> {Berean's plain-English parsing: count}, for the morphology dictionary
+
+
 def build_testament(rows, greek):
     sort_col, strong_col, wtag, cls = (GRK_SORT, STR_GRK, "WG", "Xg") if greek else (HEB_SORT, STR_HEB, "WH", "Xh")
     refs, words = {}, defaultdict(list)
@@ -95,6 +98,9 @@ def build_testament(rows, greek):
             mp = re.sub(r"\s*\|\s*", "+", clean(r[MORPH])).replace(" ", "")
             if mp:
                 w += "<WT%s>" % esc(mp)
+                desc = [d.strip() for d in clean(r[MORPH + 1]).split("|") if d.strip()]
+                if desc:
+                    MORPH_DESC[mp]["|".join(desc)] += 1
             w += "<Xe>%s</Xe>」" % esc(eng or "-")
             parts.append(w)
             nwords += 1
@@ -129,6 +135,33 @@ Berean Bible Translation Committee. This text of God's Word has been dedicated t
 <p>Verse numbering is KJV-style (31,102 verses). Verses the Berean text omits (e.g. Matthew 17:21) are empty.</p>"""
 
 
+def build_morphology_dictionary(path):
+    if os.path.exists(path):
+        os.remove(path)
+    c = sqlite3.connect(path)
+    c.executescript("""
+CREATE TABLE details (title TEXT, abbreviation TEXT, description TEXT, comments TEXT, author TEXT, strong INTEGER,
+ version TEXT, versiondate DATETIME, publishdate TEXT, CustomCSS TEXT, morphology BOOL);
+CREATE TABLE Dictionary (word, data);
+""")
+    info = ("Parsing codes for the Berean Interlinear Bible (Hebrew &amp; Greek), BIBhg. "
+            "Descriptions are from the Berean Bible BSB Translation Tables, bereanbible.com.")
+    c.execute("insert into details values (?,?,?,?,?,?,?,?,?,?,?)", (
+        "Berean Morphology Codes", "BIBhgm", info, info, "Berean Bible Translation Committee", 0, "2.0",
+        "2026-10-13 00:00:00", "2026-10-13 00:00:00", "b {color:Midnightblue;}", 1))
+    # a few codes carry different descriptions on different rows in Berean's tables; keep the most common
+    disputed = sum(1 for v in MORPH_DESC.values() if len(v) > 1)
+    entries = []
+    for code, v in sorted(MORPH_DESC.items()):
+        desc = v.most_common(1)[0][0].split("|")
+        entries.append((code, "<b>%s</b><br>%s" % (esc(code), "<br>".join(esc(d) for d in desc))))
+    c.executemany("insert into Dictionary values (?,?)", entries)
+    c.execute("create index idx_dict on Dictionary(word)")
+    c.commit(); c.execute("vacuum"); c.close()
+    print("morphology dictionary: %d codes (%d with conflicting descriptions in the source) -> %s (%.1f KB)"
+          % (len(MORPH_DESC), disputed, path, os.path.getsize(path) / 1e3))
+
+
 def build():
     hb, nh = build_testament(read_rows("bsb_OT.tsv.zip"), greek=False)
     gk, ng = build_testament(read_rows("bsb_NT.tsv.zip"), greek=True)
@@ -153,6 +186,7 @@ CREATE TABLE Bible (Book INTEGER, Chapter INTEGER, Verse INTEGER, Scripture TEXT
     c.executemany("insert into Bible values (?,?,?,?)", rows)
     c.execute("create index idx_bible on Bible(Book,Chapter,Verse)")
     c.commit(); c.execute("vacuum"); c.close()
+    build_morphology_dictionary(os.path.join(os.path.dirname(OUT), "BIBhg-morph.dct.mybible"))
     print("verses: hebrew %d (%d words), greek %d (%d words) -> %s (%.1f MB)"
           % (len(hb), nh, len(gk), ng, OUT, os.path.getsize(OUT) / 1e6))
 

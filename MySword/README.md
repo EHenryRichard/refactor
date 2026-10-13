@@ -1,6 +1,9 @@
 # MySword Interlinear Bible (Hebrew + Greek)
 
-**File to download:** [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — one module, all 66 books.
+**Files to download:**
+
+* [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — the interlinear Bible, all 66 books.
+* [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
 
 Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
 
@@ -14,9 +17,11 @@ Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
 
 ## Install
 
-1. Download `BIBhg.bbl.mybible` (open the file page on GitHub and use the download button).
-2. Put it in MySword's Bible modules folder (the path is shown in MySword's settings), or open the file with MySword.
-3. In MySword choose the Bible module **BIBhg**.
+1. Download both files (open each file page on GitHub and use the download button).
+2. Put `BIBhg.bbl.mybible` in MySword's Bible modules folder and `BIBhg-morph.dct.mybible` in its dictionaries folder (the paths are shown in MySword's settings), or open each file with MySword.
+3. In MySword choose the Bible module **BIBhg**. Tapping a morphology code should show Berean's description.
+
+Strong's numbers use whichever Strong's dictionary you have installed in MySword (not included here).
 
 Not tested inside the MySword app (it was built and checked as a database only). If the layout looks wrong, open an issue with a screenshot.
 
