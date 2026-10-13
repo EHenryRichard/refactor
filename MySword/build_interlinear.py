@@ -60,8 +60,7 @@ def english(r):
     e = clean(r[ENGLISH])
     if not e:
         return ""
-    if e == "vvv":
-        e = "-"
+    e = re.sub(r"\bvvv\b", "-", e)
     return clean(r[BEG_Q].strip() + e + r[PNC].strip() + r[END_Q].strip())
 
 
