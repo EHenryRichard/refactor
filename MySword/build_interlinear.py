@@ -104,7 +104,7 @@ def build_testament(rows, greek):
             parts.append(w)
             nwords += 1
         body = " ".join(parts)
-        out[key] = "<Xr>%s</Xr>" % body if not greek else body
+        out[key] = ("<Xn>%s</Xn>" if greek else "<Xr>%s</Xr>") % body
     return out, nwords
 
 
@@ -112,6 +112,7 @@ RULES = [
     ("「", "<span class='w'>"),
     ("」", "</span>"),
     ("<Xr>(.*?)</Xr>", "<div class='hbv'>$1</div>"),
+    ("<Xn>(.*?)</Xn>", "<div class='gkv'>$1</div>"),
     ("<Xh>(.*?)</Xh>", "<span class='hb'>$1</span>"),
     ("<Xg>(.*?)</Xg>", "<span class='gk'>$1</span>"),
     ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
@@ -124,6 +125,7 @@ span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direct
 span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
 span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
 div.hbv {direction:rtl;text-align:right;}
+div.gkv {direction:ltr;text-align:left;}
 span.w a {display:block;font-size:70%;line-height:1.25;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
