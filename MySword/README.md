@@ -2,7 +2,7 @@
 
 **File to download:** [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — one module, all 66 books.
 
-* Old Testament: every Hebrew word, with transliteration, Strong's number (`H…`), morphology, English gloss.
+* Old Testament: every Hebrew word, with transliteration, Strong's number (`H…`), morphology, and the Berean English word ("-" where Berean has none).
 * New Testament: every Greek word of the Berean Interlinear Bible, with transliteration, Strong's number (`G…`),
   morphology, Berean English. Textual-variant words are in italics.
 * Verse numbering is KJV. Nehemiah 7:68 is empty because the Hebrew text does not have it.
@@ -27,4 +27,4 @@ Sources: `../e-Sword/FINAL/BIB++.bbli.zip` (Greek) and `source/BHSA-8-layer-inte
 
 * Greek: Berean Interlinear Bible, © 2016 Bible Hub, free licence (berean.bible/licensing.htm).
 * Hebrew: [Open Hebrew Bible Project](https://github.com/eliranwong/OpenHebrewBible) by Eliran Wong, **CC BY-NC 4.0**, built on ETCBC's BHS
-  (non-commercial) and OpenScriptures Strong's numbers. **Non-commercial use only.** Hebrew glosses are ETCBC glosses, not Berean's.
+  (non-commercial) and OpenScriptures Strong's numbers. **Non-commercial use only.** English on the Hebrew side is the Berean Study Bible, aligned word-by-word by that project.

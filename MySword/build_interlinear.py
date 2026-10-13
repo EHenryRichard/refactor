@@ -72,7 +72,11 @@ def hebrew_verses():
         m = re.match(r"〔\d+｜(\d+)｜(\d+)｜(\d+)〕", r[1])
         key = tuple(map(int, m.groups()))
         heb = tag.sub("", r[2]).strip()
-        translit, morph, gloss = r[3].strip(), r[8].strip(), r[10].strip()
+        translit, morph = r[3].strip(), r[8].strip()
+        # English is the Berean Study Bible word aligned to this Hebrew word; "-" when Berean
+        # has none (same convention as the Greek side). A malformed row spills into extra columns.
+        bsb = re.findall(r"〔\d+＠([^〕〔]*)", "".join(r[11:]))
+        gloss = (bsb[-1].strip() if bsb else "") or "-"
         # original Strong's only; H9000+ are Tyndale prefix pseudo-entries MySword has no entry for
         strongs = [s for s in r[7].split("_") if re.fullmatch(r"H\d+", s) and int(s[1:]) < 9000]
         w = "「<Xh>%s</Xh>" % esc(heb)
@@ -105,13 +109,13 @@ div.hbv {direction:rtl;text-align:right;}"""
 
 DESC = """<h2>Berean Interlinear Bible &mdash; Hebrew &amp; Greek</h2>
 <p>Every word of the Old Testament (Hebrew) and New Testament (Greek) with transliteration,
-Strong's number, morphology and an English gloss. Tap a Strong's number or morphology code
+Strong's number, morphology and the Berean English. Tap a Strong's number or morphology code
 for the lookup.</p>
-<p><b>Greek NT:</b> Berean Interlinear Bible &copy; 2016 by Bible Hub (berean.bible), free licence.<br>
-<b>Hebrew OT:</b> Biblia Hebraica Stuttgartensia text and morphology from ETCBC; Strong's numbers from
-OpenScriptures via the Berean project; alignment by Eliran Wong's Open Hebrew Bible project
-(CC BY-NC 4.0, github.com/eliranwong/OpenHebrewBible). Hebrew glosses are ETCBC glosses.
-<b>Non-commercial use only.</b></p>
+<p><b>English:</b> Berean Study Bible (Hebrew) and Berean Interlinear Bible (Greek), &copy; 2016 by Bible Hub
+(berean.bible), free licence. Hebrew words with no English counterpart show "-".<br>
+<b>Hebrew:</b> BHS text, transliteration and morphology from ETCBC; Strong's numbers from OpenScriptures via
+the Berean project; Berean-to-Hebrew word alignment by Eliran Wong's Open Hebrew Bible project
+(CC BY-NC 4.0, github.com/eliranwong/OpenHebrewBible). <b>Non-commercial use only.</b></p>
 <p>Verse numbering is KJV (Nehemiah 7:68 has no Hebrew text).</p>"""
 
 
