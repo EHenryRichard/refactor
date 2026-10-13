@@ -6,6 +6,8 @@
 * [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
 * [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
   Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
+* [`BIBhg-concordance.dct.mybible`](BIBhg-concordance.dct.mybible) — BSB English concordance (BIBhgc): every
+  English word, every verse it occurs in, with a short context line. Rebuild with `build_concordance.py`.
 
 Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
 
@@ -54,3 +56,13 @@ not carry the Berean name.
   by Ulrik Petersen (public domain), plus Berean's short Greek definitions (public domain) from
   `../MyBible/dictionary/Berean_StrongNoDictionary.csv`.
 * Sources: `source/strongs/` (from the `strongs` 1.0.2 npm package, github.com/openscriptures/strongs).
+
+### English concordance (`BIBhg-concordance.dct.mybible`)
+
+* Source: Berean's **BSB Concordance - xlsx** (berean.bible, Study Tools, 2nd printing), `bsb_concordance.xlsx`,
+  52,051,537 bytes, SHA-256 `01a888e221cdfb652b19e2791e82b5a7141beb703d54661b8819ff49d89580d3`. Stored as
+  tab-separated text in `source/concordance/bsb_concordance.tsv.zip` (columns A–I, unchanged cell values).
+* 14,782 words, 726,744 occurrences; every reference matches a verse in BIBhg. Word counts agree with the BSB
+  Translation Tables to within 0.03% (e.g. Lord 7,603 vs 7,606), as the concordance follows an earlier printing.
+* Very common words ("The", "And", "Of" …) have very large entries (up to ~4 MB) and may open slowly.
+* The verse-link format (`VERSE_LINK` in `build_concordance.py`) has not yet been tested in MySword.
