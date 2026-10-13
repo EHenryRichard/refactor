@@ -1,0 +1,56 @@
+# Hebrew & Greek Interlinear (BSB Tables) for MySword
+
+**Files to download:**
+
+* [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — the interlinear Bible, all 66 books.
+* [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
+* [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
+  Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
+
+Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
+
+* Old Testament: every Hebrew/Aramaic word, with transliteration, Strong's number (`H…`), morphology, and the
+  Berean Standard Bible English for that word.
+* New Testament: every Greek word, with transliteration, Strong's number (`G…`), morphology, and the Berean
+  Standard Bible English for that word.
+* Words with no English counterpart of their own (e.g. the Hebrew object marker) show "-", as in Berean's tables.
+* Verse numbering is KJV-style (31,102 verses). Verses the Berean text leaves out (e.g. Matthew 17:21) are empty.
+  Nehemiah 7:68 has English only, as in the Berean table.
+
+## Install
+
+1. Download both files (open each file page on GitHub and use the download button).
+2. Put `BIBhg.bbl.mybible` in MySword's Bible modules folder and `BIBhg-morph.dct.mybible` in its dictionaries folder (the paths are shown in MySword's settings), or open each file with MySword.
+3. In MySword choose the Bible module **BIBhg**. Tapping a morphology code should show Berean's description.
+
+Strong's numbers use whichever Strong's dictionary you have installed in MySword (not included here).
+
+Not tested inside the MySword app (it was built and checked as a database only). If the layout looks wrong, open an issue with a screenshot.
+
+## Rebuild
+
+```
+python3 build_interlinear.py
+```
+
+Source files: `source/bsb_OT.tsv.zip` and `source/bsb_NT.tsv.zip` (the Berean tables, split by testament and zipped).
+
+## Source and licence
+
+The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
+OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the
+public domain (Berean terms and conditions, 30 April 2023: "All uses are freely permitted").
+
+This module is an independent adaptation, not an official Berean product. It differs from the official text in
+presentation (Hebrew/Greek word order, "vvv" shown as "-", verse labels removed), so per Berean's request it does
+not carry the Berean name.
+
+### Strong's dictionary (`BIBhg-strongs.dct.mybible`)
+
+* Hebrew: James Strong, *A Concise Dictionary of the Words in the Hebrew Bible* (1894, public domain); e-text by
+  David Instone-Brewer and David Troidl; JSON edition © 2010 Open Scriptures, **CC-BY-SA 3.0**. Because of this,
+  the Strong's dictionary module is shared under CC-BY-SA (keep this credit if you redistribute it).
+* Greek: James Strong, *A Concise Dictionary of the Words in the Greek Testament* (public domain); XML edition 1.4
+  by Ulrik Petersen (public domain), plus Berean's short Greek definitions (public domain) from
+  `../MyBible/dictionary/Berean_StrongNoDictionary.csv`.
+* Sources: `source/strongs/` (from the `strongs` 1.0.2 npm package, github.com/openscriptures/strongs).
