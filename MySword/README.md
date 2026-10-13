@@ -4,6 +4,8 @@
 
 * [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — the interlinear Bible, all 66 books.
 * [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
+* [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
+  Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
 
 Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
 
@@ -42,3 +44,13 @@ public domain (Berean terms and conditions, 30 April 2023: "All uses are freely 
 This module is an independent adaptation, not an official Berean product. It differs from the official text in
 presentation (Hebrew/Greek word order, "vvv" shown as "-", verse labels removed), so per Berean's request it does
 not carry the Berean name.
+
+### Strong's dictionary (`BIBhg-strongs.dct.mybible`)
+
+* Hebrew: James Strong, *A Concise Dictionary of the Words in the Hebrew Bible* (1894, public domain); e-text by
+  David Instone-Brewer and David Troidl; JSON edition © 2010 Open Scriptures, **CC-BY-SA 3.0**. Because of this,
+  the Strong's dictionary module is shared under CC-BY-SA (keep this credit if you redistribute it).
+* Greek: James Strong, *A Concise Dictionary of the Words in the Greek Testament* (public domain); XML edition 1.4
+  by Ulrik Petersen (public domain), plus Berean's short Greek definitions (public domain) from
+  `../MyBible/dictionary/Berean_StrongNoDictionary.csv`.
+* Sources: `source/strongs/` (from the `strongs` 1.0.2 npm package, github.com/openscriptures/strongs).
