@@ -91,6 +91,7 @@ def build_testament(rows, greek):
             tl = clean(r[TRANSLIT])
             if tl:
                 w += "<Xt>%s</Xt>" % esc(tl)
+            w += "<Xs>"
             sn = clean(r[strong_col])
             if sn.isdigit():
                 w += "<%s%s>" % (wtag, sn)
@@ -100,7 +101,7 @@ def build_testament(rows, greek):
                 desc = [d.strip() for d in clean(r[MORPH + 1]).split("|") if d.strip()]
                 if desc:
                     MORPH_DESC[mp]["|".join(desc)] += 1
-            w += "<Xe>%s</Xe>」" % esc(eng or "-")
+            w += "</Xs><Xe>%s</Xe>」" % esc(eng or "-")
             parts.append(w)
             nwords += 1
         body = " ".join(parts)
@@ -111,20 +112,24 @@ def build_testament(rows, greek):
 RULES = [
     # layout is also written inline (style=…): in New Testament verses MySword kept the colours from CustomCSS
     # but dropped its layout rules, so every word ran together on one line
-    ("「", "<span class='ilw' style='display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px'>"),
+    # Box is at least a quarter of the line (4 per row); only the Hebrew/Greek word sets a wider box.
+    # Every other part has width:0;min-width:100% so it wraps inside the box instead of widening it.
+    ("「", "<span class='ilw' style='display:inline-block;min-width:calc(25% - 16px);text-align:center;"
+           "vertical-align:top;margin:0 4px 10px 4px'>"),
     ("」", "</span>"),
     ("<Xr>(.*?)</Xr>", "<div class='ilhbv' style='direction:rtl;text-align:right'>$1</div>"),
     ("<Xn>(.*?)</Xn>", "<div class='ilgkv' style='direction:ltr;text-align:left'>$1</div>"),
-    ("<Xh>(.*?)</Xh>", "<span class='ilhb' style='display:block;direction:rtl'>$1</span>"),
-    ("<Xg>(.*?)</Xg>", "<span class='ilgk' style='display:block'>$1</span>"),
-    ("<Xt>(.*?)</Xt>", "<span class='iltl' style='display:block;direction:ltr;unicode-bidi:isolate'>$1</span>"),
-    ("<Xe>(.*?)</Xe>", "<span class='ilen' style='display:block;direction:ltr;unicode-bidi:isolate'>$1</span>"),
+    ("<Xh>(.*?)</Xh>", "<span class='ilhb' style='display:block;direction:rtl;white-space:nowrap'>$1</span>"),
+    ("<Xg>(.*?)</Xg>", "<span class='ilgk' style='display:block;white-space:nowrap'>$1</span>"),
+    ("<Xt>(.*?)</Xt>", "<span class='iltl' style='display:block;width:0;min-width:100%;overflow-wrap:anywhere;direction:ltr;unicode-bidi:isolate'>$1</span>"),
+    ("<Xs>(.*?)</Xs>", "<span class='ilsm' style='display:block;width:0;min-width:100%;overflow-wrap:anywhere;'>$1</span>"),
+    ("<Xe>(.*?)</Xe>", "<span class='ilen' style='display:block;width:0;min-width:100%;overflow-wrap:anywhere;direction:ltr;unicode-bidi:isolate'>$1</span>"),
 ]
 CSS = """/* colours and sizes; layout is also inline in RULES. Each part is its own block inside the word box
    (MySword drops <br> in verse text). Class names are prefixed "il" to avoid clashing with MySword's own. */
-span.ilw {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
-span.ilgk {display:block;font-size:135%;color:Midnightblue;font-weight:bold;}
-span.ilhb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
+span.ilw {display:inline-block;min-width:calc(25% - 16px);text-align:center;vertical-align:top;margin:0 4px 10px 4px;}
+span.ilgk {display:block;font-size:120%;color:Midnightblue;font-weight:bold;}
+span.ilhb {display:block;font-size:135%;color:Midnightblue;font-weight:bold;direction:rtl;}
 span.iltl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
 span.ilen {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
 div.ilhbv {direction:rtl;text-align:right;}
