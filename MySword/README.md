@@ -6,6 +6,10 @@
 * [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
 * [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
   Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
+* [`BSBs.bbl.mybible`](BSBs.bbl.mybible) — **BSB+**: the Berean Standard Bible in normal English reading order,
+  each word tagged with its Strong's number and parsing (hidden or shown with MySword's Strong's/morphology toggles;
+  tap a word to open BIBhgs/BIBhgm). Includes BSB headings, footnotes and supplied words in italics.
+  Rebuild with `build_bsb.py`.
 * [`BIBhg-concordance.dct.mybible`](BIBhg-concordance.dct.mybible) — BSB English concordance (BIBhgc): every
   English word, every verse it occurs in, with a short context line. Rebuild with `build_concordance.py`.
 
