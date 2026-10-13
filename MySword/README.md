@@ -2,10 +2,15 @@
 
 **File to download:** [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — one module, all 66 books.
 
-* Old Testament: every Hebrew word, with transliteration, Strong's number (`H…`), morphology, and the Berean English word ("-" where Berean has none).
-* New Testament: every Greek word of the Berean Interlinear Bible, with transliteration, Strong's number (`G…`),
-  morphology, Berean English. Textual-variant words are in italics.
-* Verse numbering is KJV. Nehemiah 7:68 is empty because the Hebrew text does not have it.
+Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
+
+* Old Testament: every Hebrew/Aramaic word, with transliteration, Strong's number (`H…`), morphology, and the
+  Berean Standard Bible English for that word.
+* New Testament: every Greek word, with transliteration, Strong's number (`G…`), morphology, and the Berean
+  Standard Bible English for that word.
+* Words with no English counterpart of their own (e.g. the Hebrew object marker) show "-", as in Berean's tables.
+* Verse numbering is KJV-style (31,102 verses). Verses the Berean text leaves out (e.g. Matthew 17:21) are empty.
+  Nehemiah 7:68 has English only, as in the Berean table.
 
 ## Install
 
@@ -21,10 +26,11 @@ Not tested inside the MySword app (it was built and checked as a database only).
 python3 build_interlinear.py
 ```
 
-Sources: `../e-Sword/FINAL/BIB++.bbli.zip` (Greek) and `source/BHSA-8-layer-interlinear.csv.zip` (Hebrew).
+Source files: `source/bsb_OT.tsv.zip` and `source/bsb_NT.tsv.zip` (the Berean tables, split by testament and zipped).
 
-## Licences
+## Source and licence
 
-* Greek: Berean Interlinear Bible, © 2016 Bible Hub, free licence (berean.bible/licensing.htm).
-* Hebrew: [Open Hebrew Bible Project](https://github.com/eliranwong/OpenHebrewBible) by Eliran Wong, **CC BY-NC 4.0**, built on ETCBC's BHS
-  (non-commercial) and OpenScriptures Strong's numbers. **Non-commercial use only.** English on the Hebrew side is the Berean Study Bible, aligned word-by-word by that project.
+The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
+unfoldingWord, Bible Aquifer, OpenBible.com, and the Berean Bible Translation Committee. The Berean Bible
+states: "This text of God's Word has been dedicated to the public domain." Check bereanbible.com for the terms
+that apply to the Hebrew and Greek tables themselves.

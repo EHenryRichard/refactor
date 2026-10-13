@@ -1,21 +1,38 @@
 #!/usr/bin/env python3
-"""Build a MySword interlinear Bible module (Hebrew OT + Greek NT).
+"""Build a MySword interlinear Bible module (Hebrew OT + Greek NT) from Berean's BSB Translation Tables.
 
-Inputs (both inside this repo):
-  ../e-Sword/FINAL/BIB++.bbli.zip       Berean Interlinear Bible, Greek NT
-  source/BHSA-8-layer-interlinear.csv.zip  Hebrew OT, 8-layer interlinear
+Input  (Berean "BSB Translation Tables", tsv):
+  source/bsb_OT.tsv.zip   Genesis-Malachi
+  source/bsb_NT.tsv.zip   Matthew-Revelation
 Output:
   BIBhg.bbl.mybible   (SQLite; copy into MySword's modules folder)
 
 Usage: python3 build_interlinear.py [outfile]
 """
 import csv, io, os, re, sqlite3, sys, zipfile
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from html import escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "BIBhg.bbl.mybible")
 csv.field_size_limit(10**9)
+
+# column positions in the Berean tables
+HEB_SORT, GRK_SORT, VERSE_SEQ, LANG, TEXT, TRANSLIT, MORPH = 0, 1, 3, 4, 5, 7, 8
+STR_HEB, STR_GRK, VERSE_ID, BEG_Q, ENGLISH, PNC, END_Q = 10, 11, 12, 17, 18, 19, 20
+
+BOOK_LIST = [
+    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel",
+    "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job",
+    "Psalm", "Proverbs", "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel",
+    "Daniel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai",
+    "Zechariah", "Malachi", "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians",
+    "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians",
+    "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter",
+    "1 John", "2 John", "3 John", "Jude", "Revelation"]
+BOOK_NO = {n: i + 1 for i, n in enumerate(BOOK_LIST)}
+
+TAG = re.compile(r"<[^>]+>")
 
 
 def esc(s):
@@ -23,72 +40,67 @@ def esc(s):
     return escape(s, quote=False)
 
 
-def greek_verses():
-    z = zipfile.ZipFile(os.path.join(HERE, "..", "e-Sword", "FINAL", "BIB++.bbli.zip"))
-    name = next(n for n in z.namelist() if n.endswith(".bbli") and "__MACOSX" not in n)
-    tmp = os.path.join(HERE, ".tmp_bib.bbli")
-    with open(tmp, "wb") as f:
-        f.write(z.read(name))
-    c = sqlite3.connect(tmp)
-    word = re.compile(
-        r"<INT><grk>(.*?)</grk> <sup><font color='gray'>(.*?)</font></sup><sup>\|</sup>"
-        r"<num>(G\d+)</num><sup>\|</sup><not>(.*?)</not><sup>\|</sup><sup><red>(.*?)</red></sup><int>")
-    out, nwords = OrderedDict(), 0
-    token = re.compile(r"<var>|</var>|<not>[a-z]</not>|" + word.pattern)
-    for b, ch, v, text in c.execute("select Book,Chapter,Verse,Scripture from Bible order by 1,2,3"):
-        parts, in_var = [], False
-        # textual-variant words are italic in the Berean convention; footnote letters are dropped
-        rest = token.sub(lambda m: "", text)
-        assert not rest.strip(), (b, ch, v, rest[:80])
-        for m in token.finditer(text):
-            t = m.group(0)
-            if t == "<var>":
-                in_var = True
-            elif t == "</var>":
-                in_var = False
-            elif m.group(1) is not None:
-                gk, tl, strong, morph, en = m.groups()
-                en = esc(en)
-                if in_var:
-                    en = "<i>%s</i>" % en
-                parts.append("「<Xg>%s</Xg><Xt>%s</Xt><W%s><WT%s><Xe>%s</Xe>」"
-                             % (esc(gk), esc(tl), strong, esc(morph), en))
-        assert parts and not in_var, (b, ch, v)
-        nwords += len(parts)
-        out[(b, ch, v)] = " ".join(parts)
-    c.close(); os.remove(tmp)
-    return out, nwords
-
-
-def hebrew_verses():
-    z = zipfile.ZipFile(os.path.join(HERE, "source", "BHSA-8-layer-interlinear.csv.zip"))
-    name = next(n for n in z.namelist() if n.endswith(".csv") and "__MACOSX" not in n)
+def read_rows(zipname):
+    z = zipfile.ZipFile(os.path.join(HERE, "source", zipname))
+    name = next(n for n in z.namelist() if n.endswith(".tsv") and "__MACOSX" not in n)
     rd = csv.reader(io.TextIOWrapper(z.open(name), encoding="utf-8", newline=""),
                     delimiter="\t", quoting=csv.QUOTE_NONE)
     next(rd)
+    return [r + [""] * (23 - len(r)) for r in rd]
+
+
+def clean(s):
+    s = re.sub(r"<span class=\|reftext\|>.*?</span>", "", s)  # Berean's in-text verse labels (e.g. Psalm 23 "1")
+    return re.sub(r"\s+", " ", TAG.sub("", s)).strip()
+
+
+def english(r):
+    # BSB word, with the BSB punctuation and quote marks that belong to it.
+    # "vvv" is Berean's placeholder for a word whose sense is carried by a neighbouring word.
+    e = clean(r[ENGLISH])
+    if not e:
+        return ""
+    if e == "vvv":
+        e = "-"
+    return clean(r[BEG_Q].strip() + e + r[PNC].strip() + r[END_Q].strip())
+
+
+def build_testament(rows, greek):
+    sort_col, strong_col, wtag, cls = (GRK_SORT, STR_GRK, "WG", "Xg") if greek else (HEB_SORT, STR_HEB, "WH", "Xh")
+    refs, words = {}, defaultdict(list)
+    for r in rows:
+        seq = int(r[VERSE_SEQ])
+        if r[VERSE_ID].strip():
+            refs[seq] = r[VERSE_ID].strip()
+        eng = english(r)
+        text = clean(r[TEXT])
+        if not text and not eng:
+            continue  # padding row, or a stray morphology fragment with no word
+        words[seq].append((float(r[sort_col]), r, text, eng))
     out, nwords = OrderedDict(), 0
-    tag = re.compile(r"<[^>]+>")
-    for r in rd:
-        m = re.match(r"〔\d+｜(\d+)｜(\d+)｜(\d+)〕", r[1])
-        key = tuple(map(int, m.groups()))
-        heb = tag.sub("", r[2]).strip()
-        translit, morph = r[3].strip(), r[8].strip()
-        # English is the Berean Study Bible word aligned to this Hebrew word; "-" when Berean
-        # has none (same convention as the Greek side). A malformed row spills into extra columns.
-        bsb = re.findall(r"〔\d+＠([^〕〔]*)", "".join(r[11:]))
-        gloss = (bsb[-1].strip() if bsb else "") or "-"
-        # original Strong's only; H9000+ are Tyndale prefix pseudo-entries MySword has no entry for
-        strongs = [s for s in r[7].split("_") if re.fullmatch(r"H\d+", s) and int(s[1:]) < 9000]
-        w = "「<Xh>%s</Xh>" % esc(heb)
-        if translit:
-            w += "<Xt>%s</Xt>" % esc(translit)
-        w += "".join("<W%s>" % s for s in strongs)
-        if morph:
-            w += "<WT%s>" % esc(morph)
-        w += "<Xe>%s</Xe>」" % esc(gloss)
-        out.setdefault(key, []).append(w)
-        nwords += 1
-    return OrderedDict((k, "<Xr>%s</Xr>" % " ".join(v)) for k, v in out.items()), nwords
+    for seq in sorted(words):
+        m = re.fullmatch(r"(.+) (\d+):(\d+)", refs[seq])
+        key = (BOOK_NO[m.group(1)], int(m.group(2)), int(m.group(3)))
+        parts = []
+        for _, r, text, eng in sorted(words[seq], key=lambda w: w[0]):
+            w = "「"
+            if text:
+                w += "<%s>%s</%s>" % (cls, esc(text), cls)
+            tl = clean(r[TRANSLIT])
+            if tl:
+                w += "<Xt>%s</Xt>" % esc(tl)
+            sn = clean(r[strong_col])
+            if sn.isdigit():
+                w += "<%s%s>" % (wtag, sn)
+            mp = re.sub(r"\s*\|\s*", "+", clean(r[MORPH])).replace(" ", "")
+            if mp:
+                w += "<WT%s>" % esc(mp)
+            w += "<Xe>%s</Xe>」" % esc(eng or "-")
+            parts.append(w)
+            nwords += 1
+        body = " ".join(parts)
+        out[key] = "<Xr>%s</Xr>" % body if not greek else body
+    return out, nwords
 
 
 RULES = [
@@ -108,20 +120,18 @@ span.en {font-size:85%;color:IndianRed;font-weight:bold;}
 div.hbv {direction:rtl;text-align:right;}"""
 
 DESC = """<h2>Berean Interlinear Bible &mdash; Hebrew &amp; Greek</h2>
-<p>Every word of the Old Testament (Hebrew) and New Testament (Greek) with transliteration,
-Strong's number, morphology and the Berean English. Tap a Strong's number or morphology code
-for the lookup.</p>
-<p><b>English:</b> Berean Study Bible (Hebrew) and Berean Interlinear Bible (Greek), &copy; 2016 by Bible Hub
-(berean.bible), free licence. Hebrew words with no English counterpart show "-".<br>
-<b>Hebrew:</b> BHS text, transliteration and morphology from ETCBC; Strong's numbers from OpenScriptures via
-the Berean project; Berean-to-Hebrew word alignment by Eliran Wong's Open Hebrew Bible project
-(CC BY-NC 4.0, github.com/eliranwong/OpenHebrewBible). <b>Non-commercial use only.</b></p>
-<p>Verse numbering is KJV (Nehemiah 7:68 has no Hebrew text).</p>"""
+<p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
+Strong's number, morphology and the Berean Standard Bible English for that word ("-" where the Berean
+text has no English counterpart). Tap a Strong's number or morphology code for the lookup.</p>
+<p>Source: Berean Bible BSB Translation Tables, bereanbible.com. The Holy Bible, Berean Standard Bible, BSB is
+produced in cooperation with Bible Hub, Discovery Bible, unfoldingWord, Bible Aquifer, OpenBible.com, and the
+Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain.</p>
+<p>Verse numbering is KJV-style (31,102 verses). Verses the Berean text omits (e.g. Matthew 17:21) are empty.</p>"""
 
 
 def build():
-    gk, ng = greek_verses()
-    hb, nh = hebrew_verses()
+    hb, nh = build_testament(read_rows("bsb_OT.tsv.zip"), greek=False)
+    gk, ng = build_testament(read_rows("bsb_NT.tsv.zip"), greek=True)
     if os.path.exists(OUT):
         os.remove(OUT)
     c = sqlite3.connect(OUT)
@@ -133,10 +143,10 @@ CREATE TABLE Details (Title NVARCHAR(255), Description TEXT, Abbreviation NVARCH
 CREATE TABLE Bible (Book INTEGER, Chapter INTEGER, Verse INTEGER, Scripture TEXT);
 """)
     c.execute("insert into Details values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-        "Berean Interlinear Bible (Hebrew & Greek)", DESC, "BIBhg", DESC, "1.0",
-        "2026-10-12 00:00:00", "2026-10-12 00:00:00", "Bible Hub / ETCBC / OpenScriptures",
-        "Bible Hub; ETCBC; OpenScriptures; Eliran Wong", "BibleBento Berean-remix",
-        "https://github.com/EHenryRichard/refactor", None, "eng", 0, 1, 1, 1,
+        "Berean Interlinear Bible (Hebrew & Greek)", DESC, "BIBhg", DESC, "2.0",
+        "2026-10-13 00:00:00", "2026-10-13 00:00:00", "Bible Hub / Berean Bible Translation Committee",
+        "Berean Bible Translation Committee", "BibleBento Berean-remix",
+        "https://bereanbible.com", None, "eng", 0, 1, 1, 1,
         "\n".join("%s\t%s" % r for r in RULES), CSS))
     rows = [(b, ch, v, t) for d in (hb, gk) for (b, ch, v), t in d.items()]
     rows.sort(key=lambda r: r[:3])
