@@ -118,12 +118,13 @@ RULES = [
     ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
 ]
 CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
-span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 5px 8px 5px;}
+span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
 span.gk {display:block;font-size:135%;color:Midnightblue;font-weight:bold;}
 span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
 span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
 span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
-div.hbv {direction:rtl;text-align:right;}"""
+div.hbv {direction:rtl;text-align:right;}
+span.w a {display:block;font-size:70%;line-height:1.25;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
