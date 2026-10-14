@@ -22,9 +22,13 @@ Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
   Berean Standard Bible English for that word.
 * New Testament: every Greek word, with transliteration, Strong's number (`G…`), morphology, and the Berean
   Standard Bible English for that word.
-* A literal English gloss for each word (teal line, above the BSB English) from STEPBible's Translators Amalgamated
-  Hebrew OT and Greek NT (TAHOT/TAGNT, CC BY 4.0, STEPBible.org / Tyndale House Cambridge), matched to the Berean
-  words by spelling (443,403 of 443,626 words). Sources in `source/stepbible/` (STEPBible-Data commit 93ec362).
+* A literal English gloss for each word (teal line, above the BSB English), one source per Testament, named under
+  every verse ("Literal: …"):
+  * New Testament: Berean's own interlinear wording (Berean Interlinear Bible, as on Bible Hub), from
+    `../e-Sword/Final-bible_with_variants/Final_BIB.csv`; no other source is mixed in, so the 2 Greek words it does
+    not cover (Matthew 25:16, Mark 1:1) are blank.
+  * Old Testament (Berean has no OT interlinear): STEPBible's Translators Amalgamated Hebrew OT (TAHOT, CC BY 4.0,
+    STEPBible.org / Tyndale House Cambridge), `source/stepbible/` (STEPBible-Data commit 93ec362).
 * Under each verse, the whole verse as one BSB sentence in normal English reading order (supplied words in italics).
 * Words with no English counterpart of their own (e.g. the Hebrew object marker) show "-", as in Berean's tables.
 * Verse numbering is KJV-style (31,102 verses). Verses the Berean text leaves out (e.g. Matthew 17:21) are empty.
