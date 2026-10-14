@@ -35,7 +35,11 @@ Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
     not cover (Matthew 25:16, Mark 1:1) are blank.
   * Old Testament (Berean has no OT interlinear): STEPBible's Translators Amalgamated Hebrew OT (TAHOT, CC BY 4.0,
     STEPBible.org / Tyndale House Cambridge), `source/stepbible/` (STEPBible-Data commit 93ec362).
-* Under each verse, the whole verse as one BSB sentence in normal English reading order (supplied words in italics).
+* Under each verse, three lines: the verse in Hebrew/Greek; the word-for-word line (teal, the literal glosses joined
+  in the original order, brackets kept); and the BSB sentence (orange, normal English order, supplied words in italics).
+* A Hebrew or Greek word English does not translate there (the object marker אֵת, the Greek article where English
+  drops it) shows "no English" in its word box and as the word itself, e.g. *(’êṯ)*, in grey italic in the
+  word-for-word line; the module's information page explains this.
 * Words with no English counterpart of their own (e.g. the Hebrew object marker) show "-", as in Berean's tables.
 * Verse numbering is KJV-style (31,102 verses). Verses the Berean text leaves out (e.g. Matthew 17:21) are empty.
   Nehemiah 7:68 has English only, as in the Berean table.

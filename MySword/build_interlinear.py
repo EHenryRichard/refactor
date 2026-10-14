@@ -149,6 +149,39 @@ def bsb_sentence(rs):
 
 
 LITERAL_STATS = Counter()
+NO_ENGLISH = "<Xz>no English</Xz>"  # grey italic: a word English does not translate here (see the key in DESC)
+NOT_MODAL = re.compile(r"\bnot (should|shall|may|might|would|will|can|could|must)\b")
+
+
+def gloss_cell(g):
+    # the literal line in a word box; Hebrew's object marker and empty glosses are "no English"
+    if g is None or g.strip() in ("", "-", "[obj.]"):
+        return NO_ENGLISH
+    if "[obj.]" in g:
+        return "%s %s" % (esc(g.replace("[obj.]", "").strip()), NO_ENGLISH)
+    return esc(g)
+
+
+def english_cell(eng):
+    # the BSB word in a word box; "-" (no English of its own) becomes "no English"; ". . ." is Berean's own and stays
+    if not eng or (not re.sub(r"[^\w\[\]]", "", eng) and not eng.strip().startswith(". . .")):
+        return NO_ENGLISH
+    return esc(eng)
+
+
+def literal_sentence(glosses, translits):
+    # the literal words as one line in the original order; a word English does not translate shows as itself,
+    # transliterated, in grey italic (e.g. "(’êṯ)", "(ho)")
+    parts = []
+    for g, tl in zip(glosses, translits):
+        if g is None or g.strip() in ("", "-", "[obj.]"):
+            if tl:
+                parts.append("<Xz>(%s)</Xz>" % esc(tl.rstrip("-")))
+        elif "[obj.]" in g:
+            parts.append("%s <Xz>(’êṯ)</Xz>" % esc(g.replace("[obj.]", "").strip()))
+        else:
+            parts.append(esc(g.strip()))
+    return NOT_MODAL.sub(r"\1 not", re.sub(r"\s+", " ", " ".join(parts)).strip())
 
 
 def build_testament(rows, greek, literal, source):
@@ -182,9 +215,11 @@ def build_testament(rows, greek, literal, source):
                 lit = wider
         LITERAL_STATS["words"] += len(ordered)
         LITERAL_STATS["matched"] += len(lit)
+        translits = []
         for i, (_, r, text, eng) in enumerate(ordered):
-            lt = esc(lit[i]) if i in lit else "&nbsp;"  # keeps the rows lined up when a word has no gloss
+            lt = gloss_cell(lit.get(i))
             tl = clean(r[TRANSLIT])
+            translits.append(tl)
             sn = clean(r[strong_col])
             sn = "<%s%s>" % (wtag, sn) if sn.isdigit() else ""
             mp = re.sub(r"\s*\|\s*", "+", clean(r[MORPH])).replace(" ", "")
@@ -198,18 +233,23 @@ def build_testament(rows, greek, literal, source):
             if greek:
                 # one small table per word: every part gets its own row, whatever MySword does to the text inside
                 w = "【<Xg>%s</Xg><Xu>%s</Xu>%s<Xm>%s<Xk>%s</Xk><Xf>%s</Xf>】" % (
-                    esc(text), esc(tl), sn, mp, lt, esc(eng or "-"))
+                    esc(text), esc(tl), sn, mp, lt, english_cell(eng))
             else:
                 w = "「"
                 if text:
                     w += "<%s>%s</%s>" % (cls, esc(text), cls)
                 if tl:
                     w += "<Xt>%s</Xt>" % esc(tl)
-                w += "%s%s<Xl>%s</Xl><Xe>%s</Xe>」" % (sn, mp, lt, esc(eng or "-"))
+                w += "%s%s<Xl>%s</Xl><Xe>%s</Xe>」" % (sn, mp, lt, english_cell(eng))
             parts.append(w)
             nwords += 1
         body = " ".join(parts)
         out[key] = ("<Xn>%s</Xn>" if greek else "<Xr>%s</Xr>") % body
+        # under the words: the verse in the original language, then word for word, then the BSB
+        original = " ".join(esc(t) for t in texts if t)
+        if original:
+            out[key] += ("<Xo>%s</Xo>" if greek else "<Xa>%s</Xa>") % original
+        out[key] += "<Xw>%s</Xw>" % literal_sentence([lit.get(i) for i in range(len(ordered))], translits)
         sentence = bsb_sentence(english_rows[seq])
         if sentence:
             # words the translators supplied are in [brackets]; show them in italics (MySword's <FI>…<Fi>)
@@ -236,6 +276,10 @@ RULES = [
     ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
     ("<Xl>(.*?)</Xl>", "<span class='lt'>$1</span>"),
     ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
+    ("<Xa>(.*?)</Xa>", "<div class='oh'>$1</div>"),
+    ("<Xo>(.*?)</Xo>", "<div class='og'>$1</div>"),
+    ("<Xw>(.*?)</Xw>", "<div class='ws'>$1</div>"),
+    ("<Xz>(.*?)</Xz>", "<span class='ne'>$1</span>"),
     ("<Xb>(.*?)</Xb>", "<div class='bs'>$1</div>"),
     ("<Xc>(.*?)</Xc>", "<div class='src'>$1</div>"),
 ]
@@ -260,8 +304,15 @@ td.ln a {color:#8A93C9;}
 td.mp a {color:#9AA36E;}
 td.lt {font-size:80%;color:#5FAAA0;}
 td.en {font-size:85%;color:#B8875E;font-weight:600;}
-div.bs {direction:ltr;text-align:left;clear:both;margin:2px 4px 14px 4px;padding:6px 10px;border-left:3px solid #5FAAA0;
- color:#CFC8BA;font-size:95%;line-height:1.45;}
+div.oh {direction:rtl;text-align:right;clear:both;margin:6px 4px 4px 4px;padding:6px 10px;border-right:3px solid #6E9BCB;
+ color:#E6E6E6;font-size:130%;line-height:1.6;}
+div.og {direction:ltr;text-align:left;clear:both;margin:6px 4px 4px 4px;padding:6px 10px;border-left:3px solid #6E9BCB;
+ color:#E6E6E6;font-size:120%;line-height:1.6;}
+div.ws {direction:ltr;text-align:left;clear:both;margin:4px;padding:6px 10px;border-left:3px solid #5FAAA0;
+ color:#5FAAA0;font-size:105%;line-height:1.5;}
+div.bs {direction:ltr;text-align:left;clear:both;margin:4px 4px 14px 4px;padding:6px 10px;border-left:3px solid #B8875E;
+ color:#B8875E;font-weight:600;font-size:100%;line-height:1.5;}
+span.ne {color:#8F8F8F;font-style:italic;font-weight:normal;}
 div.src {direction:ltr;text-align:left;margin:-10px 4px 16px 17px;color:#8F8F8F;font-size:70%;font-style:italic;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
@@ -278,6 +329,10 @@ New Testament: The Holy Bible, Berean Interlinear Bible, BIB, Copyright &copy;20
 dedicated to the public domain on 30 April 2023), only; a word it does not cover is left blank.
 Old Testament: STEPBible.org, Translators Amalgamated Hebrew OT (TAHOT), CC BY 4.0, Tyndale House Cambridge.
 Both are matched to the Berean words by spelling.</p>
+<p>Under each verse: the verse in Hebrew/Greek, then word for word (teal, in the original order), then the BSB
+(orange). <i>Grey italic</i> marks a Hebrew or Greek word that English does not translate there: אֵת (’êṯ) marks the
+object of the verb and has no English equivalent; the Greek "the" (ho, tou...) is left out where English grammar does
+not use it. In a word box it reads "no English"; in the word-for-word line it shows the word itself, e.g. (’êṯ).</p>
 <p>Verse numbering is KJV-style (31,102 verses). Verses the Berean text omits (e.g. Matthew 17:21) are empty.</p>"""
 
 
