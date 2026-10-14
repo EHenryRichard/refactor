@@ -7,7 +7,9 @@
 * [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
   Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
 * [`BIBhg-thayer.dct.mybible`](BIBhg-thayer.dct.mybible) — **Thayer's Greek & BDB Hebrew Lexicon** (BIBhgt): Thayer's
-  unabridged for Greek Strong's numbers; Brown-Driver-Briggs (then Strong's) for Hebrew numbers. In a Strong's popup, switch the dictionary to
+  unabridged for Greek Strong's numbers; Brown-Driver-Briggs for Hebrew numbers. Each entry opens with a Bible Hub-style
+  summary box (short meaning, original word, part of speech, transliteration, origin, KJV, occurrences, Strong's
+  definition). Needs `BIBhg-strongs` and `BIBhg-occurrences` built first. In a Strong's popup, switch the dictionary to
   BIBhgt. Rebuild with `build_thayer.py`.
 * [`BIBhg-occurrences.dct.mybible`](BIBhg-occurrences.dct.mybible) — **Word Occurrences** (BIBhgo), like Bible Hub's
   Englishman's Concordance: for each Strong's number, how often it occurs, its BSB English renderings and Hebrew/Greek

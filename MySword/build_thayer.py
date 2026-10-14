@@ -10,11 +10,13 @@ Input:
 Output:
   BIBhg-thayer.dct.mybible
 
+Each entry opens with a Bible Hub-style summary box from BIBhg-strongs.dct.mybible and BIBhg-occurrences.dct.mybible,
+so build_strongs.py and build_occurrences.py must run first.
+
 Usage: python3 build_thayer.py [outfile]
 """
 import html, os, re, sqlite3, sys, tempfile, zipfile
-
-import build_strongs
+from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "BIBhg-thayer.dct.mybible")
@@ -26,6 +28,7 @@ BOOKS = ("Gen Exo Lev Num Deu Jos Jdg Rth 1Sa 2Sa 1Ki 2Ki 1Ch 2Ch Ezr Neh Est Jo
 BOOK_NO = {b: i + 1 for i, b in enumerate(BOOKS)}  # Apocrypha (Wis, Sir, 1Ma ...) and the few broken ">Ki" refs stay plain text
 LATIN_RUN = re.compile("[\u00c0-\u00ff]+")
 HEB_CHAR = re.compile("[\u0590-\u05ff]")
+GREEK = re.compile("[\u0370-\u03ff\u1f00-\u1fff]")
 LEGACY_RUN = re.compile("[\u00c0-\u00ff\u0370-\u03ff](?:[\u00c0-\u00ff\u0370-\u03ff ]*[\u00c0-\u00ff\u0370-\u03ff])?")
 
 
@@ -65,7 +68,8 @@ def convert(d):
     d = re.sub(r"<span>(.*?)</span>", lambda m: LEGACY_RUN.sub(lambda r: hebrew(r.group(0)), html.unescape(m.group(1))), d)
     d = re.sub(r"<span style=\"\" lang=\"[^\"]*\">(.*?)</span>", r"\1", d)
     d = re.sub(r"<ref>([^<]*)</ref>", ref, d)
-    d = d.replace("<blu>", "<span class='gk'>").replace("</blu>", "</span>")
+    # blue is Greek in this source, but the same tag also wraps English, Hebrew and punctuation: only Greek goes blue
+    d = re.sub(r"<blu>(.*?)</blu>", lambda m: "<span class='gk'>%s</span>" % m.group(1) if GREEK.search(html.unescape(m.group(1))) else m.group(1), d, flags=re.S)
     d = d.replace("<red>", "<span class='rd'>").replace("</red>", "</span>")
     # spell out the remaining entities as characters, but keep the markup characters escaped
     d = re.sub(r"&(?!(?:lt|gt|amp|quot);)#?\w+;", lambda m: html.unescape(m.group(0)), d)
@@ -118,13 +122,74 @@ def read_bdb():
     return out
 
 
-def hebrew_entries():
-    bdb = read_bdb()
-    for k, strongs in build_strongs.hebrew():
-        h = "".join("<div class='bdb'>%s</div>" % b for b in bdb.get(k, []))  # div: senses are blocks
-        if h:
-            h = "<p class='hd'>BDB</p>" + h + "<hr><p class='hd'>Strong's</p>"
-        yield k, h + strongs
+def bdb_glosses():
+    # Strong's Hebrew number -> the first short BDB definition (its lexical index lists the Strong's number after it)
+    with zipfile.ZipFile(os.path.join(HERE, "source", "bdb", "HebrewLexicon.zip")) as z:
+        index = z.read("LexicalIndex.xml").decode("utf-8")
+    out = {}
+    for m in re.finditer(r'<def>([^<]*)</def>\s*<xref ([^>]*)/>', index):
+        a = dict(re.findall(r'(\w+)="([^"]*)"', m.group(2)))
+        if a.get("strong", "").isdigit():
+            out.setdefault("H%d" % int(a["strong"]), m.group(1))
+    return out
+
+
+def dictionary(name):
+    # a dictionary already built by build_strongs.py / build_occurrences.py (run those first)
+    c = sqlite3.connect(os.path.join(HERE, name))
+    try:
+        return dict(c.execute("select word, data from Dictionary"))
+    finally:
+        c.close()
+
+
+POS = {"N": "Noun", "V": "Verb", "Adj": "Adjective", "Adv": "Adverb", "Prep": "Preposition", "Conj": "Conjunction",
+       "Art": "Article", "PPro": "Personal pronoun", "DPro": "Demonstrative pronoun", "RelPro": "Relative pronoun",
+       "IPro": "Interrogative pronoun", "Pro": "Pronoun", "PRT": "Particle", "Inj": "Interjection", "Interj": "Interjection",
+       "Neg": "Negative particle", "Pr": "Pronoun", "Pp": "Personal pronoun", "Prp": "Preposition"}
+GENDER = {"M": "Masculine", "F": "Feminine", "N": "Neuter", "m": "Masculine", "f": "Feminine", "c": "Common"}
+
+
+def part_of_speech(codes, hebrew):
+    # the most common parsing code for this number; the prefix (e.g. Conj-w+) is not the word's own part of speech
+    if not codes:
+        return ""
+    code = codes.most_common(1)[0][0].split("+")[-1]
+    head = code.split("-")[0]
+    pos = POS.get(head, head)
+    if pos in ("Noun", "Adjective") and len(code.split("-")) > 1:
+        parts = code.split("-")[1]
+        g = parts[0] if hebrew else (parts[1] if len(parts) > 1 else "")
+        if GENDER.get(g):
+            pos += ", " + GENDER[g].lower()
+    return pos
+
+
+def lexical_header(k, entry, occurrences, summary):
+    # Bible Hub-style summary box: the short meaning, original word, part of speech, transliteration, origin, KJV,
+    # occurrences and Strong's definition
+    hebrew = k.startswith("H")
+    m = re.search(r"<p><b>(.*?)</b>(?: &nbsp;<i>(.*?)</i>)?(?: &nbsp;\((.*?)\))?</p>", entry)
+    lemma, xlit, pron = m.groups() if m else ("", "", "")
+    def field(label):
+        f = re.search(r"<b>%s:</b> (.*?)</p>" % label, entry)
+        return f.group(1) if f else ""
+    occ = occurrences.get(k, "")
+    count = re.search(r": (\d+) occurrences? in (\d+) verses?", occ)
+    codes = Counter(re.findall(r"<i>([^<]*)</i> &ndash;", occ))
+    if not summary:
+        summary = field("Berean")
+    rows = [("Original Word", "<span class='%s'>%s</span>" % ("hb" if hebrew else "gk", lemma)),
+            ("Part of Speech", part_of_speech(codes, hebrew)),
+            ("Transliteration", xlit), ("Phonetic Spelling", "(%s)" % pron if pron else ""),
+            ("Word Origin", field("Derivation")), ("KJV", field("KJV")),
+            ("Occurrences", "%s (full list in BIBhgo)" % count.group(1) if count else ""),
+            ("Strong's", field("Strong's"))]
+    head = "<div class='lx'><p class='lxt'>Lexical Summary</p>"
+    if summary or xlit:
+        head += "<p class='lxm'>%s%s</p>" % (xlit + ": " if xlit else "", summary)
+    head += "".join("<p class='lxr'><span class='lxl'>%s:</span> %s</p>" % r for r in rows if r[1])
+    return head + "</div>"
 
 
 INFO = """<h2>Thayer's Greek &amp; BDB Hebrew Lexicon (BIBhg)</h2>
@@ -136,14 +201,39 @@ e-text from the Open Scriptures Hebrew Lexicon (BrownDriverBriggs.xml, LexicalIn
 Each Hebrew entry also gives Strong's Hebrew: James Strong, A Concise Dictionary of the Words in the Hebrew Bible (1894, public domain);
 e-text by David Instone-Brewer and David Troidl; JSON edition &copy; 2010 Open Scriptures, CC-BY-SA 3.0.
 This dictionary module is therefore shared under CC-BY-SA.</p>"""
-CSS = ("span.gk {color:#6E9BCB;font-weight:600;} span.rd {color:#C98A7A;} "
+CSS = ("a {text-decoration:none;} span.gk {color:#6E9BCB;font-weight:600;} span.rd {color:#C98A7A;} "
        "span.hb {direction:rtl;unicode-bidi:isolate;font-size:115%;color:#6E9BCB;} span.df {color:#B8875E;} "
-       "b.st {color:#9AA36E;} div.sn {margin-left:1em;} p.hd {color:#8F8F8F;font-size:85%;margin-bottom:0;} div.bdb {margin:0.5em 0;}")
+       "b.st {color:#9AA36E;} div.sn {margin-left:1em;} p.hd {color:#8F8F8F;font-size:85%;margin-bottom:0;} div.bdb {margin:0.5em 0;} "
+       "div.lx {border:1px solid #333;border-radius:6px;padding:6px 10px;margin-bottom:10px;} "
+       "p.lxt {color:#8F8F8F;font-size:85%;margin:0 0 4px 0;} p.lxm {font-weight:600;color:#CFC8BA;margin:0 0 6px 0;} "
+       "p.lxr {margin:2px 0;} span.lxl {color:#5FAAA0;font-weight:600;}")
+
+
+def entries():
+    strongs = dictionary("BIBhg-strongs.dct.mybible")
+    occurrences = dictionary("BIBhg-occurrences.dct.mybible")
+    bdb, gloss = read_bdb(), bdb_glosses()
+    thayer = {k: convert(d) for k, d in read_lexicon()}
+    for k in sorted(strongs, key=lambda w: (w[0], int(w[1:]))):
+        if not k[1:].isdigit():
+            continue
+        hebrew = k.startswith("H")
+        summary = gloss.get(k, "") if hebrew else ""
+        head = lexical_header(k, strongs[k], occurrences, summary)
+        if hebrew:
+            body = "".join("<div class='bdb'>%s</div>" % b for b in bdb.get(k, []))  # div: senses are blocks
+            if body:
+                body = "<p class='hd'>BDB</p>" + body
+        else:
+            body = thayer.get(k, "")
+            if body:
+                body = "<p class='hd'>Thayer's</p>" + body
+        yield k, head + body
 
 
 def main():
-    greek = [(k, convert(d)) for k, d in read_lexicon()]
-    rows = list(hebrew_entries()) + greek
+    rows = list(entries())
+    greek = [r for r in rows if r[0].startswith("G")]
     if os.path.exists(OUT):
         os.remove(OUT)
     c = sqlite3.connect(OUT)
