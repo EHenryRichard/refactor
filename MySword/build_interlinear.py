@@ -15,6 +15,8 @@ import csv, difflib, io, os, re, sqlite3, sys, unicodedata, zipfile
 from collections import Counter, OrderedDict, defaultdict
 from html import escape
 
+import morph_glossary
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "BIBhg.bbl.mybible")
 csv.field_size_limit(10**9)
@@ -113,6 +115,7 @@ def match_literal(words, step, greek):
 
 
 MORPH_DESC = defaultdict(Counter)  # <WT> code -> {Berean's plain-English parsing: count}, for the morphology dictionary
+MORPH_HEBREW = set()  # codes used on Hebrew/Aramaic words (the rest are Greek)
 
 
 LITERAL_STATS = Counter()
@@ -157,6 +160,8 @@ def build_testament(rows, greek, literal):
                 desc = [d.strip() for d in clean(r[MORPH + 1]).split("|") if d.strip()]
                 if desc:
                     MORPH_DESC[mp]["|".join(desc)] += 1
+                    if not greek:
+                        MORPH_HEBREW.add(mp)
                 mp = "<WT%s>" % esc(mp)
             if greek:
                 # one small table per word: every part gets its own row, whatever MySword does to the text inside
@@ -235,16 +240,26 @@ CREATE TABLE details (title TEXT, abbreviation TEXT, description TEXT, comments 
 CREATE TABLE Dictionary (word, data);
 """)
     info = ("Parsing codes for the Hebrew &amp; Greek Interlinear (BSB Tables), BIBhg. "
-            "Descriptions are from the BSB Translation Tables, berean.bible. Not an official Berean product.")
+            "Descriptions are from the BSB Translation Tables, berean.bible. Not an official Berean product. "
+            "The grammar explanations under each code were written for this module.")
     c.execute("insert into details values (?,?,?,?,?,?,?,?,?,?,?)", (
         "Interlinear Morphology Codes (BSB Tables)", "BIBhgm", info, info, "Berean Bible Translation Committee (source data)", 0, "2.0",
-        "2026-10-13 00:00:00", "2026-10-13 00:00:00", "b {color:Midnightblue;}", 1))
+        "2026-10-14 00:00:00", "2026-10-14 00:00:00", "b {color:Midnightblue;}", 1))
     # a few codes carry different descriptions on different rows in Berean's tables; keep the most common
     disputed = sum(1 for v in MORPH_DESC.values() if len(v) > 1)
     entries = []
     for code, v in sorted(MORPH_DESC.items()):
         desc = v.most_common(1)[0][0].split("|")
-        entries.append((code, "<b>%s</b><br>%s" % (esc(code), "<br>".join(esc(d) for d in desc))))
+        html = "<p><b>%s</b><br>%s</p>" % (esc(code), "<br>".join(esc(d) for d in desc))
+        parts = morph_glossary.explain(" | ".join(desc), hebrew=code in MORPH_HEBREW)
+        if code in MORPH_HEBREW and morph_glossary.suffix(code):
+            parts.append(morph_glossary.suffix(code))
+        if parts:
+            html += "<hr>" + "".join("<p><b>%s:</b> %s</p>" % (esc(h), esc(t)) for h, t in parts)
+        entries.append((code, html))
+        # MySword reads "+" in a tapped code as a space (as in a web address), so file it under that name too
+        if "+" in code:
+            entries.append((code.replace("+", " "), html))
     c.executemany("insert into Dictionary values (?,?)", entries)
     c.execute("create index idx_dict on Dictionary(word)")
     c.commit(); c.execute("vacuum"); c.close()

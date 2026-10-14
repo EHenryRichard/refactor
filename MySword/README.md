@@ -3,7 +3,7 @@
 **Files to download:**
 
 * [`BIBhg.bbl.mybible`](BIBhg.bbl.mybible) — the interlinear Bible, all 66 books.
-* [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
+* [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions, each followed by a plain-English explanation of every part: tense, voice, mood, case, Hebrew stem, prefixes, pronoun suffixes). Needed for the parsing popups. Codes with "+" are also filed with a space, because MySword looks them up that way.
 * [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
   Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
 * [`BIBhg-thayer.dct.mybible`](BIBhg-thayer.dct.mybible) — **Thayer's Greek Lexicon** (BIBhgt), unabridged, for the
