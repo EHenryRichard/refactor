@@ -191,7 +191,7 @@ RULES = [
     ("【", "<table class='gw'><tr><td class='gk'>"),
     ("<Xg>(.*?)</Xg>", "$1</td></tr><tr><td class='tl'>"),
     ("<Xu>(.*?)</Xu>", "$1</td></tr><tr><td class='ln'>"),
-    ("<Xm>", "</td></tr><tr><td class='ln'>"),
+    ("<Xm>", "</td></tr><tr><td class='mp'>"),
     ("<Xk>(.*?)</Xk>", "</td></tr><tr><td class='lt'>$1"),
     ("<Xf>(.*?)</Xf>", "</td></tr><tr><td class='en'>$1"),
     ("】", "</td></tr></table>"),
@@ -199,22 +199,27 @@ RULES = [
     ("<Xl>(.*?)</Xl>", "<span class='lt'>$1</span>"),
     ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
 ]
+# calm palette: muted colours, about 7:1 contrast on a black background (MySword's dark theme), no underlines
 CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
-span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
-span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
-span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
-span.lt {display:block;direction:ltr;unicode-bidi:isolate;font-size:80%;color:DarkCyan;}
-span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
+span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 12px 6px;}
+span.hb {display:block;font-size:150%;color:#6E9BCB;font-weight:600;direction:rtl;}
+span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:#8F8F8F;font-style:italic;}
+span.lt {display:block;direction:ltr;unicode-bidi:isolate;font-size:80%;color:#5FAAA0;}
+span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:#B8875E;font-weight:600;}
 div.hbv {direction:rtl;text-align:right;}
 div.gkv {direction:ltr;text-align:left;}
-span.w a {display:block;font-size:70%;line-height:1.25;}
-table.gw {display:inline-table;border-collapse:collapse;vertical-align:top;margin:0 6px 10px 6px;}
+span.w a {display:block;font-size:70%;line-height:1.3;text-decoration:none;color:#8A93C9;}
+span.w a:nth-of-type(2) {color:#9AA36E;}
+table.gw {display:inline-table;border-collapse:collapse;vertical-align:top;margin:0 6px 12px 6px;}
 table.gw td {text-align:center;padding:0;}
-td.gk {font-size:135%;color:Midnightblue;font-weight:bold;}
-td.tl {font-size:75%;color:Gray;font-style:italic;}
-td.ln {font-size:70%;line-height:1.25;}
-td.lt {font-size:80%;color:DarkCyan;}
-td.en {font-size:85%;color:IndianRed;font-weight:bold;}"""
+table.gw a {text-decoration:none;}
+td.gk {font-size:135%;color:#6E9BCB;font-weight:600;}
+td.tl {font-size:75%;color:#8F8F8F;font-style:italic;}
+td.ln, td.mp {font-size:70%;line-height:1.3;}
+td.ln a {color:#8A93C9;}
+td.mp a {color:#9AA36E;}
+td.lt {font-size:80%;color:#5FAAA0;}
+td.en {font-size:85%;color:#B8875E;font-weight:600;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
