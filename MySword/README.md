@@ -22,6 +22,9 @@ Built only from Berean's own **BSB Translation Tables** (bereanbible.com):
   Berean Standard Bible English for that word.
 * New Testament: every Greek word, with transliteration, Strong's number (`G…`), morphology, and the Berean
   Standard Bible English for that word.
+* A literal English gloss for each word (teal line, above the BSB English) from STEPBible's Translators Amalgamated
+  Hebrew OT and Greek NT (TAHOT/TAGNT, CC BY 4.0, STEPBible.org / Tyndale House Cambridge), matched to the Berean
+  words by spelling (443,403 of 443,626 words). Sources in `source/stepbible/` (STEPBible-Data commit 93ec362).
 * Words with no English counterpart of their own (e.g. the Hebrew object marker) show "-", as in Berean's tables.
 * Verse numbering is KJV-style (31,102 verses). Verses the Berean text leaves out (e.g. Matthew 17:21) are empty.
   Nehemiah 7:68 has English only, as in the Berean table.
