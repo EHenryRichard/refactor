@@ -24,6 +24,7 @@ csv.field_size_limit(10**9)
 # column positions in the Berean tables
 HEB_SORT, GRK_SORT, VERSE_SEQ, LANG, TEXT, TRANSLIT, MORPH = 0, 1, 3, 4, 5, 7, 8
 STR_HEB, STR_GRK, VERSE_ID, BEG_Q, ENGLISH, PNC, END_Q = 10, 11, 12, 17, 18, 19, 20
+BSB_SORT, END_TEXT = 2, 22
 
 BOOK_LIST = [
     "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel",
@@ -118,14 +119,30 @@ MORPH_DESC = defaultdict(Counter)  # <WT> code -> {Berean's plain-English parsin
 MORPH_HEBREW = set()  # codes used on Hebrew/Aramaic words (the rest are Greek)
 
 
+def bsb_sentence(rs):
+    # the verse as one BSB sentence, in English reading order (as in build_bsb.py), without the "vvv"/". . ." placeholders
+    parts = []
+    for r in sorted(rs, key=lambda r: float(r[BSB_SORT])):
+        eng = clean(r[ENGLISH])
+        if eng in ("vvv", "-", ". . ."):
+            eng = ""
+        eng = re.sub(r"\bvvv\b", "", eng).strip()
+        text = clean(r[BEG_Q].strip() + eng + r[PNC].strip() + r[END_Q].strip() + r[END_TEXT].strip())
+        if text:
+            parts.append(text)
+    return re.sub(r"\s+([,.;:!?’”)])", r"\1", " ".join(parts))
+
+
 LITERAL_STATS = Counter()
 
 
 def build_testament(rows, greek, literal):
     sort_col, strong_col, wtag, cls = (GRK_SORT, STR_GRK, "WG", "Xg") if greek else (HEB_SORT, STR_HEB, "WH", "Xh")
-    refs, words = {}, defaultdict(list)
+    refs, words, english_rows = {}, defaultdict(list), defaultdict(list)
     for r in rows:
         seq = int(r[VERSE_SEQ])
+        if r[BSB_SORT].strip():
+            english_rows[seq].append(r)
         if r[VERSE_ID].strip():
             refs[seq] = r[VERSE_ID].strip()
         eng = english(r)
@@ -178,6 +195,11 @@ def build_testament(rows, greek, literal):
             nwords += 1
         body = " ".join(parts)
         out[key] = ("<Xn>%s</Xn>" if greek else "<Xr>%s</Xr>") % body
+        sentence = bsb_sentence(english_rows[seq])
+        if sentence:
+            # words the translators supplied are in [brackets]; show them in italics (MySword's <FI>…<Fi>)
+            sentence = re.sub(r"\[\s*([^\]]*?)\s*\]", r"<FI>\1<Fi>", esc(sentence))
+            out[key] += "<Xb>%s</Xb>" % sentence
     return out, nwords
 
 
@@ -198,6 +220,7 @@ RULES = [
     ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
     ("<Xl>(.*?)</Xl>", "<span class='lt'>$1</span>"),
     ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
+    ("<Xb>(.*?)</Xb>", "<div class='bs'>$1</div>"),
 ]
 # calm palette: muted colours, about 7:1 contrast on a black background (MySword's dark theme), no underlines
 CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
@@ -219,7 +242,9 @@ td.ln, td.mp {font-size:70%;line-height:1.3;}
 td.ln a {color:#8A93C9;}
 td.mp a {color:#9AA36E;}
 td.lt {font-size:80%;color:#5FAAA0;}
-td.en {font-size:85%;color:#B8875E;font-weight:600;}"""
+td.en {font-size:85%;color:#B8875E;font-weight:600;}
+div.bs {direction:ltr;text-align:left;clear:both;margin:2px 4px 14px 4px;padding:6px 10px;border-left:3px solid #5FAAA0;
+ color:#CFC8BA;font-size:95%;line-height:1.45;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
