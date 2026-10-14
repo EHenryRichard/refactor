@@ -6,8 +6,8 @@
 * [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions, each followed by a plain-English explanation of every part: tense, voice, mood, case, Hebrew stem, prefixes, pronoun suffixes). Needed for the parsing popups. Codes with "+" are also filed with a space, because MySword looks them up that way.
 * [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
   Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
-* [`BIBhg-thayer.dct.mybible`](BIBhg-thayer.dct.mybible) — **Thayer's Greek Lexicon** (BIBhgt), unabridged, for the
-  Greek Strong's number popups (Hebrew numbers open Strong's Hebrew). In a Strong's popup, switch the dictionary to
+* [`BIBhg-thayer.dct.mybible`](BIBhg-thayer.dct.mybible) — **Thayer's Greek & BDB Hebrew Lexicon** (BIBhgt): Thayer's
+  unabridged for Greek Strong's numbers; Brown-Driver-Briggs (then Strong's) for Hebrew numbers. In a Strong's popup, switch the dictionary to
   BIBhgt. Rebuild with `build_thayer.py`.
 * [`BSBs.bbl.mybible`](BSBs.bbl.mybible) — **BSB+**: the Berean Standard Bible in normal English reading order,
   each word tagged with its Strong's number and parsing (hidden or shown with MySword's Strong's/morphology toggles;
@@ -85,4 +85,7 @@ not carry the Berean name.
 * The source's Hebrew words are in an old Windows-1255 font encoding; they are converted to Unicode Hebrew.
   Bible references become verse links (same format as the concordance; not yet tested in MySword). References to
   the Apocrypha stay plain text.
-* Hebrew numbers use Strong's Hebrew (same source and CC-BY-SA licence as `BIBhg-strongs.dct.mybible`).
+* Hebrew numbers open BDB: Brown, Driver, Briggs, *A Hebrew and English Lexicon of the Old Testament* (1906, public
+  domain), abridged e-text from the Open Scriptures Hebrew Lexicon (github.com/openscriptures/HebrewLexicon, commit
+  21c9add, CC BY 4.0), `source/bdb/HebrewLexicon.zip`; matched to Strong's numbers by its LexicalIndex.xml (8,673 of
+  8,674 numbers). Below it, Strong's Hebrew (same source and CC-BY-SA licence as `BIBhg-strongs.dct.mybible`).
