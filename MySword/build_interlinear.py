@@ -4,12 +4,14 @@
 Input  (Berean "BSB Translation Tables", tsv):
   source/bsb_OT.tsv.zip   Genesis-Malachi
   source/bsb_NT.tsv.zip   Matthew-Revelation
+Input  (STEPBible TAHOT/TAGNT, CC BY 4.0): literal word glosses
+  source/stepbible/*.txt.zip
 Output:
   BIBhg.bbl.mybible   (SQLite; copy into MySword's modules folder)
 
 Usage: python3 build_interlinear.py [outfile]
 """
-import csv, io, os, re, sqlite3, sys, zipfile
+import csv, difflib, io, os, re, sqlite3, sys, unicodedata, zipfile
 from collections import Counter, OrderedDict, defaultdict
 from html import escape
 
@@ -64,10 +66,59 @@ def english(r):
     return clean(r[BEG_Q].strip() + e + r[PNC].strip() + r[END_Q].strip())
 
 
+STEP_FILES = ["TAHOT_Gen-Deu", "TAHOT_Jos-Est", "TAHOT_Job-Sng", "TAHOT_Isa-Mal", "TAGNT_Mat-Jhn", "TAGNT_Act-Rev"]
+STEP_ROW = re.compile(r"([1-3]?[A-Z][a-z]+)\.(\d+)\.(\d+)[^#\t]*#\d+=")
+
+
+def skeleton(word, greek):
+    # spelling used to match a STEPBible word to a Berean word: letters only, no vowels or accents
+    if greek:
+        w = "".join(ch for ch in unicodedata.normalize("NFD", word) if "\u03b1" <= ch.lower() <= "\u03c9")
+        return w.lower().replace("\u03c2", "\u03c3")
+    return "".join(ch for ch in word if "\u05d0" <= ch <= "\u05ea")
+
+
+def read_literal():
+    # (book, chapter, verse) -> [(skeleton, literal English)], in Hebrew/Greek word order, English verse numbering
+    out, books = defaultdict(list), []
+    for name in STEP_FILES:
+        greek = name.startswith("TAGNT")
+        z = zipfile.ZipFile(os.path.join(HERE, "source", "stepbible", name + ".txt.zip"))
+        for line in io.TextIOWrapper(z.open(z.namelist()[0]), encoding="utf-8-sig"):
+            m = STEP_ROW.match(line)
+            if not m:
+                continue
+            if m.group(1) not in books:
+                books.append(m.group(1))
+            f = line.rstrip("\n").split("\t")
+            word = f[1].split(" (")[0] if greek else f[1]
+            gloss = re.sub(r"\{[^}]*\}", "", f[2] if greek else f[3]).replace("/", " ").replace("<", "[").replace(">", "]")
+            gloss = re.sub(r"\s+", " ", gloss).strip()
+            # Psalm titles are verse 0 in STEPBible but part of verse 1 in the Berean tables
+            out[(len(books), int(m.group(2)), max(int(m.group(3)), 1))].append((skeleton(word, greek), gloss))
+    assert len(books) == 66, books
+    return out
+
+
+def match_literal(words, step, greek):
+    # pair each Berean word with the STEPBible word of the same spelling, in order; same-length gaps pair up in turn
+    ours = [skeleton(text, greek) for text in words]
+    theirs = [w for w, _ in step]
+    found = {}
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, ours, theirs, autojunk=False).get_opcodes():
+        if op == "equal" or (op == "replace" and i2 - i1 == j2 - j1):
+            for k in range(i2 - i1):
+                found[i1 + k] = step[j1 + k][1]
+    return found
+
+
 MORPH_DESC = defaultdict(Counter)  # <WT> code -> {Berean's plain-English parsing: count}, for the morphology dictionary
 
 
-def build_testament(rows, greek):
+LITERAL_STATS = Counter()
+
+
+def build_testament(rows, greek, literal):
     sort_col, strong_col, wtag, cls = (GRK_SORT, STR_GRK, "WG", "Xg") if greek else (HEB_SORT, STR_HEB, "WH", "Xh")
     refs, words = {}, defaultdict(list)
     for r in rows:
@@ -84,24 +135,40 @@ def build_testament(rows, greek):
         m = re.fullmatch(r"(.+) (\d+):(\d+)", refs[seq])
         key = (BOOK_NO[m.group(1)], int(m.group(2)), int(m.group(3)))
         parts = []
-        for _, r, text, eng in sorted(words[seq], key=lambda w: w[0]):
-            w = "「"
-            if text:
-                w += "<%s>%s</%s>" % (cls, esc(text), cls)
+        ordered = sorted(words[seq], key=lambda w: w[0])
+        texts = [text for _, _, text, _ in ordered]
+        lit = match_literal(texts, literal.get(key, []), greek)
+        if len(lit) < len(texts):
+            # the two sources sometimes split verses differently (e.g. 2 Corinthians 13:12-14); look next door too
+            b, ch, v = key
+            near = literal.get((b, ch, v - 1), []) + literal.get(key, []) + literal.get((b, ch, v + 1), [])
+            wider = match_literal(texts, near, greek)
+            if len(wider) > len(lit):
+                lit = wider
+        LITERAL_STATS["words"] += len(ordered)
+        LITERAL_STATS["matched"] += len(lit)
+        for i, (_, r, text, eng) in enumerate(ordered):
+            lt = esc(lit[i]) if i in lit else "&nbsp;"  # keeps the rows lined up when a word has no gloss
             tl = clean(r[TRANSLIT])
-            if tl:
-                w += "<Xt>%s</Xt>" % esc(tl)
-            w += "<Xs>"
             sn = clean(r[strong_col])
-            if sn.isdigit():
-                w += "<%s%s>" % (wtag, sn)
+            sn = "<%s%s>" % (wtag, sn) if sn.isdigit() else ""
             mp = re.sub(r"\s*\|\s*", "+", clean(r[MORPH])).replace(" ", "")
             if mp:
-                w += "<WT%s>" % esc(mp)
                 desc = [d.strip() for d in clean(r[MORPH + 1]).split("|") if d.strip()]
                 if desc:
                     MORPH_DESC[mp]["|".join(desc)] += 1
-            w += "</Xs><Xe>%s</Xe>」" % esc(eng or "-")
+                mp = "<WT%s>" % esc(mp)
+            if greek:
+                # one small table per word: every part gets its own row, whatever MySword does to the text inside
+                w = "【<Xg>%s</Xg><Xu>%s</Xu>%s<Xm>%s<Xk>%s</Xk><Xf>%s</Xf>】" % (
+                    esc(text), esc(tl), sn, mp, lt, esc(eng or "-"))
+            else:
+                w = "「"
+                if text:
+                    w += "<%s>%s</%s>" % (cls, esc(text), cls)
+                if tl:
+                    w += "<Xt>%s</Xt>" % esc(tl)
+                w += "%s%s<Xl>%s</Xl><Xe>%s</Xe>」" % (sn, mp, lt, esc(eng or "-"))
             parts.append(w)
             nwords += 1
         body = " ".join(parts)
@@ -110,31 +177,39 @@ def build_testament(rows, greek):
 
 
 RULES = [
-    # layout is also written inline (style=…): in New Testament verses MySword kept the colours from CustomCSS
-    # but dropped its layout rules, so every word ran together on one line
-    # Box is at least a quarter of the line (4 per row); only the Hebrew/Greek word sets a wider box.
-    # Every other part has width:0;min-width:100% so it wraps inside the box instead of widening it.
-    ("「", "<span class='ilw' style='display:inline-block;min-width:calc(25% - 16px);text-align:center;"
-           "vertical-align:top;margin:0 4px 10px 4px'>"),
+    ("「", "<span class='w'>"),
     ("」", "</span>"),
-    ("<Xr>(.*?)</Xr>", "<div class='ilhbv' style='direction:rtl;text-align:right'>$1</div>"),
-    ("<Xn>(.*?)</Xn>", "<div class='ilgkv' style='direction:ltr;text-align:left'>$1</div>"),
-    ("<Xh>(.*?)</Xh>", "<span class='ilhb' style='display:block;direction:rtl;white-space:nowrap'>$1</span>"),
-    ("<Xg>(.*?)</Xg>", "<span class='ilgk' style='display:block;white-space:nowrap'>$1</span>"),
-    ("<Xt>(.*?)</Xt>", "<span class='iltl' style='display:block;width:0;min-width:100%;overflow-wrap:anywhere;direction:ltr;unicode-bidi:isolate'>$1</span>"),
-    ("<Xs>(.*?)</Xs>", "<span class='ilsm' style='display:block;width:0;min-width:100%;overflow-wrap:anywhere;'>$1</span>"),
-    ("<Xe>(.*?)</Xe>", "<span class='ilen' style='display:block;width:0;min-width:100%;overflow-wrap:anywhere;direction:ltr;unicode-bidi:isolate'>$1</span>"),
+    ("<Xr>(.*?)</Xr>", "<div class='hbv'>$1</div>"),
+    ("<Xn>(.*?)</Xn>", "<div class='gkv'>$1</div>"),
+    ("<Xh>(.*?)</Xh>", "<span class='hb'>$1</span>"),
+    # Greek word box: a table with one row per part (Greek, transliteration, Strong's, parsing, English)
+    ("【", "<table class='gw'><tr><td class='gk'>"),
+    ("<Xg>(.*?)</Xg>", "$1</td></tr><tr><td class='tl'>"),
+    ("<Xu>(.*?)</Xu>", "$1</td></tr><tr><td class='ln'>"),
+    ("<Xm>", "</td></tr><tr><td class='ln'>"),
+    ("<Xk>(.*?)</Xk>", "</td></tr><tr><td class='lt'>$1"),
+    ("<Xf>(.*?)</Xf>", "</td></tr><tr><td class='en'>$1"),
+    ("】", "</td></tr></table>"),
+    ("<Xt>(.*?)</Xt>", "<span class='tl'>$1</span>"),
+    ("<Xl>(.*?)</Xl>", "<span class='lt'>$1</span>"),
+    ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
 ]
-CSS = """/* colours and sizes; layout is also inline in RULES. Each part is its own block inside the word box
-   (MySword drops <br> in verse text). Class names are prefixed "il" to avoid clashing with MySword's own. */
-span.ilw {display:inline-block;min-width:calc(25% - 16px);text-align:center;vertical-align:top;margin:0 4px 10px 4px;}
-span.ilgk {display:block;font-size:120%;color:Midnightblue;font-weight:bold;}
-span.ilhb {display:block;font-size:135%;color:Midnightblue;font-weight:bold;direction:rtl;}
-span.iltl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
-span.ilen {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
-div.ilhbv {direction:rtl;text-align:right;}
-div.ilgkv {direction:ltr;text-align:left;}
-span.ilw a {display:block;font-size:70%;line-height:1.25;}"""
+CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
+span.w {display:inline-block;text-align:center;vertical-align:top;margin:0 6px 10px 6px;}
+span.hb {display:block;font-size:150%;color:Midnightblue;font-weight:bold;direction:rtl;}
+span.tl {display:block;direction:ltr;unicode-bidi:isolate;font-size:75%;color:Gray;font-style:italic;}
+span.lt {display:block;direction:ltr;unicode-bidi:isolate;font-size:80%;color:DarkCyan;}
+span.en {display:block;direction:ltr;unicode-bidi:isolate;font-size:85%;color:IndianRed;font-weight:bold;}
+div.hbv {direction:rtl;text-align:right;}
+div.gkv {direction:ltr;text-align:left;}
+span.w a {display:block;font-size:70%;line-height:1.25;}
+table.gw {display:inline-table;border-collapse:collapse;vertical-align:top;margin:0 6px 10px 6px;}
+table.gw td {text-align:center;padding:0;}
+td.gk {font-size:135%;color:Midnightblue;font-weight:bold;}
+td.tl {font-size:75%;color:Gray;font-style:italic;}
+td.ln {font-size:70%;line-height:1.25;}
+td.lt {font-size:80%;color:DarkCyan;}
+td.en {font-size:85%;color:IndianRed;font-weight:bold;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
@@ -145,6 +220,8 @@ product: words are in Hebrew/Greek order and the "vvv" placeholder is shown as "
 <p>The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
 OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the
 public domain.</p>
+<p>Literal word glosses (teal line): STEPBible.org, Translators Amalgamated Hebrew OT (TAHOT) and Greek NT (TAGNT),
+CC BY 4.0, Tyndale House Cambridge. Matched to the Berean words by spelling.</p>
 <p>Verse numbering is KJV-style (31,102 verses). Verses the Berean text omits (e.g. Matthew 17:21) are empty.</p>"""
 
 
@@ -176,8 +253,9 @@ CREATE TABLE Dictionary (word, data);
 
 
 def build():
-    hb, nh = build_testament(read_rows("bsb_OT.tsv.zip"), greek=False)
-    gk, ng = build_testament(read_rows("bsb_NT.tsv.zip"), greek=True)
+    literal = read_literal()
+    hb, nh = build_testament(read_rows("bsb_OT.tsv.zip"), greek=False, literal=literal)
+    gk, ng = build_testament(read_rows("bsb_NT.tsv.zip"), greek=True, literal=literal)
     if os.path.exists(OUT):
         os.remove(OUT)
     c = sqlite3.connect(OUT)
@@ -200,6 +278,7 @@ CREATE TABLE Bible (Book INTEGER, Chapter INTEGER, Verse INTEGER, Scripture TEXT
     c.execute("create index idx_bible on Bible(Book,Chapter,Verse)")
     c.commit(); c.execute("vacuum"); c.close()
     build_morphology_dictionary(os.path.join(os.path.dirname(OUT), "BIBhg-morph.dct.mybible"))
+    print("literal glosses: %d of %d words" % (LITERAL_STATS["matched"], LITERAL_STATS["words"]))
     print("verses: hebrew %d (%d words), greek %d (%d words) -> %s (%.1f MB)"
           % (len(hb), nh, len(gk), ng, OUT, os.path.getsize(OUT) / 1e6))
 
