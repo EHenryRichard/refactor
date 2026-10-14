@@ -6,6 +6,9 @@
 * [`BIBhg-morph.dct.mybible`](BIBhg-morph.dct.mybible) — morphology dictionary (3,818 codes, Berean's own descriptions). Needed for the parsing popups.
 * [`BIBhg-strongs.dct.mybible`](BIBhg-strongs.dct.mybible) — Strong's Hebrew & Greek dictionary (BIBhgs) for the
   Strong's number popups. Covers every Strong's number used in the Bible. Rebuild with `build_strongs.py`.
+* [`BIBhg-thayer.dct.mybible`](BIBhg-thayer.dct.mybible) — **Thayer's Greek Lexicon** (BIBhgt), unabridged, for the
+  Greek Strong's number popups (Hebrew numbers open Strong's Hebrew). In a Strong's popup, switch the dictionary to
+  BIBhgt. Rebuild with `build_thayer.py`.
 * [`BSBs.bbl.mybible`](BSBs.bbl.mybible) — **BSB+**: the Berean Standard Bible in normal English reading order,
   each word tagged with its Strong's number and parsing (hidden or shown with MySword's Strong's/morphology toggles;
   tap a word to open BIBhgs/BIBhgm). Includes BSB headings, footnotes and supplied words in italics.
@@ -70,3 +73,13 @@ not carry the Berean name.
   Translation Tables to within 0.03% (e.g. Lord 7,603 vs 7,606), as the concordance follows an earlier printing.
 * Very common words ("The", "And", "Of" …) have very large entries (up to ~4 MB) and may open slowly.
 * The verse-link format (`VERSE_LINK` in `build_concordance.py`) has not yet been tested in MySword.
+
+### Thayer's lexicon (`BIBhg-thayer.dct.mybible`)
+
+* Greek: Joseph Henry Thayer, *A Greek-English Lexicon of the New Testament* (1889, public domain), unabridged.
+  Source: e-Sword lexicon `thayers_unabridged.lexi` from biblesupport.com (theWord module by Rob Sauers),
+  SHA-256 `26376143c2fe36cbf65c4b27ad43ec8d9a81c779386f2881f451f5ee2a06e0c9`, stored zipped in `source/thayer/`.
+* The source's Hebrew words are in an old Windows-1255 font encoding; they are converted to Unicode Hebrew.
+  Bible references become verse links (same format as the concordance; not yet tested in MySword). References to
+  the Apocrypha stay plain text.
+* Hebrew numbers use Strong's Hebrew (same source and CC-BY-SA licence as `BIBhg-strongs.dct.mybible`).
