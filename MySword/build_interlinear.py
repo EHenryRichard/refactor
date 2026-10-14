@@ -4,8 +4,8 @@
 Input  (Berean "BSB Translation Tables", tsv):
   source/bsb_OT.tsv.zip   Genesis-Malachi
   source/bsb_NT.tsv.zip   Matthew-Revelation
-Input  (STEPBible TAHOT/TAGNT, CC BY 4.0): literal word glosses
-  source/stepbible/*.txt.zip
+Input  (literal word glosses): Old Testament STEPBible TAHOT (CC BY 4.0), source/stepbible/TAHOT_*.txt.zip;
+  New Testament Berean Interlinear Bible, ../e-Sword/Final-bible_with_variants/Final_BIB.csv
 Output:
   BIBhg.bbl.mybible   (SQLite; copy into MySword's modules folder)
 
@@ -69,7 +69,7 @@ def english(r):
     return clean(r[BEG_Q].strip() + e + r[PNC].strip() + r[END_Q].strip())
 
 
-STEP_FILES = ["TAHOT_Gen-Deu", "TAHOT_Jos-Est", "TAHOT_Job-Sng", "TAHOT_Isa-Mal", "TAGNT_Mat-Jhn", "TAGNT_Act-Rev"]
+STEP_FILES = ["TAHOT_Gen-Deu", "TAHOT_Jos-Est", "TAHOT_Job-Sng", "TAHOT_Isa-Mal"]  # Old Testament only
 STEP_ROW = re.compile(r"([1-3]?[A-Z][a-z]+)\.(\d+)\.(\d+)[^#\t]*#\d+=")
 
 
@@ -99,7 +99,22 @@ def read_literal():
             gloss = re.sub(r"\s+", " ", gloss).strip()
             # Psalm titles are verse 0 in STEPBible but part of verse 1 in the Berean tables
             out[(len(books), int(m.group(2)), max(int(m.group(3)), 1))].append((skeleton(word, greek), gloss))
-    assert len(books) == 66, books
+    assert len(books) == 39, books
+    return out
+
+
+BIB_FILE = os.path.join(HERE, "..", "e-Sword", "Final-bible_with_variants", "Final_BIB.csv")
+
+
+def read_bib():
+    # Berean Interlinear Bible (NT): (book, chapter, verse) -> [(skeleton, Berean's interlinear English)]
+    out = {}
+    with open(BIB_FILE, encoding="utf-8") as f:
+        for line in f:
+            b, ch, v, text = line.rstrip("\n").split("\t", 3)
+            out[(int(b), int(ch), int(v))] = [
+                (skeleton(TAG.sub("", g), True), re.sub(r"\s+", " ", TAG.sub("", e)).strip())
+                for g, e in re.findall(r"<grk>(.*?)</grk>\s*<sup><red>(.*?)</red></sup>", text)]
     return out
 
 
@@ -136,7 +151,7 @@ def bsb_sentence(rs):
 LITERAL_STATS = Counter()
 
 
-def build_testament(rows, greek, literal):
+def build_testament(rows, greek, literal, source):
     sort_col, strong_col, wtag, cls = (GRK_SORT, STR_GRK, "WG", "Xg") if greek else (HEB_SORT, STR_HEB, "WH", "Xh")
     refs, words, english_rows = {}, defaultdict(list), defaultdict(list)
     for r in rows:
@@ -158,7 +173,7 @@ def build_testament(rows, greek, literal):
         ordered = sorted(words[seq], key=lambda w: w[0])
         texts = [text for _, _, text, _ in ordered]
         lit = match_literal(texts, literal.get(key, []), greek)
-        if len(lit) < len(texts):
+        if len(lit) < len(texts) and not greek:
             # the two sources sometimes split verses differently (e.g. 2 Corinthians 13:12-14); look next door too
             b, ch, v = key
             near = literal.get((b, ch, v - 1), []) + literal.get(key, []) + literal.get((b, ch, v + 1), [])
@@ -200,6 +215,7 @@ def build_testament(rows, greek, literal):
             # words the translators supplied are in [brackets]; show them in italics (MySword's <FI>…<Fi>)
             sentence = re.sub(r"\[\s*([^\]]*?)\s*\]", r"<FI>\1<Fi>", esc(sentence))
             out[key] += "<Xb>%s</Xb>" % sentence
+        out[key] += "<Xc>Literal: %s</Xc>" % source  # one source per Testament, named under every verse
     return out, nwords
 
 
@@ -221,6 +237,7 @@ RULES = [
     ("<Xl>(.*?)</Xl>", "<span class='lt'>$1</span>"),
     ("<Xe>(.*?)</Xe>", "<span class='en'>$1</span>"),
     ("<Xb>(.*?)</Xb>", "<div class='bs'>$1</div>"),
+    ("<Xc>(.*?)</Xc>", "<div class='src'>$1</div>"),
 ]
 # calm palette: muted colours, about 7:1 contrast on a black background (MySword's dark theme), no underlines
 CSS = """/* each part is its own block inside the word box; MySword drops <br> in verse text */
@@ -244,7 +261,8 @@ td.mp a {color:#9AA36E;}
 td.lt {font-size:80%;color:#5FAAA0;}
 td.en {font-size:85%;color:#B8875E;font-weight:600;}
 div.bs {direction:ltr;text-align:left;clear:both;margin:2px 4px 14px 4px;padding:6px 10px;border-left:3px solid #5FAAA0;
- color:#CFC8BA;font-size:95%;line-height:1.45;}"""
+ color:#CFC8BA;font-size:95%;line-height:1.45;}
+div.src {direction:ltr;text-align:left;margin:-10px 4px 16px 17px;color:#8F8F8F;font-size:70%;font-style:italic;}"""
 
 DESC = """<h2>Hebrew &amp; Greek Interlinear (BSB Tables)</h2>
 <p>Every word of the Old Testament (Hebrew/Aramaic) and New Testament (Greek) with transliteration,
@@ -255,8 +273,11 @@ product: words are in Hebrew/Greek order and the "vvv" placeholder is shown as "
 <p>The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
 OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the
 public domain.</p>
-<p>Literal word glosses (teal line): STEPBible.org, Translators Amalgamated Hebrew OT (TAHOT) and Greek NT (TAGNT),
-CC BY 4.0, Tyndale House Cambridge. Matched to the Berean words by spelling.</p>
+<p>Literal word glosses (teal line); the source is named under every verse.
+New Testament: The Holy Bible, Berean Interlinear Bible, BIB, Copyright &copy;2016 by Bible Hub (the Berean texts were
+dedicated to the public domain on 30 April 2023), only; a word it does not cover is left blank.
+Old Testament: STEPBible.org, Translators Amalgamated Hebrew OT (TAHOT), CC BY 4.0, Tyndale House Cambridge.
+Both are matched to the Berean words by spelling.</p>
 <p>Verse numbering is KJV-style (31,102 verses). Verses the Berean text omits (e.g. Matthew 17:21) are empty.</p>"""
 
 
@@ -298,9 +319,9 @@ CREATE TABLE Dictionary (word, data);
 
 
 def build():
-    literal = read_literal()
-    hb, nh = build_testament(read_rows("bsb_OT.tsv.zip"), greek=False, literal=literal)
-    gk, ng = build_testament(read_rows("bsb_NT.tsv.zip"), greek=True, literal=literal)
+    # literal line: STEPBible in the Old Testament; Berean's own interlinear (no other source mixed in) in the New
+    hb, nh = build_testament(read_rows("bsb_OT.tsv.zip"), greek=False, literal=read_literal(), source="STEPBible")
+    gk, ng = build_testament(read_rows("bsb_NT.tsv.zip"), greek=True, literal=read_bib(), source="Berean Interlinear")
     if os.path.exists(OUT):
         os.remove(OUT)
     c = sqlite3.connect(OUT)
