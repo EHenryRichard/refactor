@@ -9,6 +9,10 @@
 * [`BIBhg-thayer.dct.mybible`](BIBhg-thayer.dct.mybible) — **Thayer's Greek & BDB Hebrew Lexicon** (BIBhgt): Thayer's
   unabridged for Greek Strong's numbers; Brown-Driver-Briggs (then Strong's) for Hebrew numbers. In a Strong's popup, switch the dictionary to
   BIBhgt. Rebuild with `build_thayer.py`.
+* [`BIBhg-occurrences.dct.mybible`](BIBhg-occurrences.dct.mybible) — **Word Occurrences** (BIBhgo), like Bible Hub's
+  Englishman's Concordance: for each Strong's number, how often it occurs, its BSB English renderings and Hebrew/Greek
+  forms with counts, then every verse (with the form, parsing and BSB English used there). In a Strong's popup, switch
+  the dictionary to BIBhgo. 13,876 numbers, 437,587 occurrences. Rebuild with `build_occurrences.py`.
 * [`BSBs.bbl.mybible`](BSBs.bbl.mybible) — **BSB+**: the Berean Standard Bible in normal English reading order,
   each word tagged with its Strong's number and parsing (hidden or shown with MySword's Strong's/morphology toggles;
   tap a word to open BIBhgs/BIBhgm). Includes BSB headings, footnotes and supplied words in italics.
